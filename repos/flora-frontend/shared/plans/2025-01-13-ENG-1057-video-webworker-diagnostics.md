@@ -11,6 +11,7 @@ The video loading system has a race condition where `isUsingWorker()` only check
 ## Desired End State
 
 After implementation:
+
 - Accurate logging that correctly identifies whether video was loaded via worker or main thread
 - Comprehensive diagnostic logging to identify bottlenecks in the worker loading process
 - Automated tests that verify timeout behavior and fallback mechanisms
@@ -18,6 +19,7 @@ After implementation:
 - No misleading logs that confuse debugging efforts
 
 ### Key Discoveries:
+
 - Worker timeout is hardcoded at 15 seconds at `src/lib/videos/video-texture-loader.ts:409`
 - The `isUsingWorker()` method at line 625 only returns `!!this.worker`, not actual loading path
 - Worker is not terminated on timeout, only on error or disposal
@@ -39,11 +41,13 @@ Fix the immediate logging issue first, then add comprehensive diagnostics to und
 ## Phase 1: Fix Misleading Status Reporting
 
 ### Overview
+
 Track which loading path actually succeeded to fix the incorrect "Video loaded using Web Worker" message when main thread fallback was used.
 
 ### Changes Required:
 
 #### 1. VideoTextureCoordinator - Add Loading Method Tracking
+
 **File**: `src/lib/videos/video-texture-loader.ts`
 **Changes**: Add a Map to track which method successfully loaded each video
 
@@ -70,6 +74,7 @@ this.loadingMethods.clear();
 ```
 
 #### 2. VideoMaterial Component - Use Accurate Status
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Update logging to use actual loading method instead of worker existence check
 
@@ -78,14 +83,14 @@ this.loadingMethods.clear();
 const status = videoCoordinator.getWorkerStatus();
 const loadingMethod = videoCoordinator.getLoadingMethod(blockId);
 
-if (loadingMethod === 'worker') {
+if (loadingMethod === "worker") {
   log.info("Video loaded using Web Worker", {
     blockId,
     videoUrl,
     workerStatus: status,
     loadingMethod,
   });
-} else if (loadingMethod === 'main-thread') {
+} else if (loadingMethod === "main-thread") {
   log.info("Video loaded on main thread (after worker retry attempts)", {
     blockId,
     videoUrl,
@@ -105,11 +110,13 @@ if (loadingMethod === 'worker') {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] TypeScript compilation passes: `pnpm typecheck`
 - [x] Existing tests pass: `pnpm test:unit`
 - [x] No linting errors: `pnpm lint`
 
 #### Manual Verification:
+
 - [ ] Load a video and verify correct "main thread" message appears after timeout
 - [ ] Load a small video that completes within 15s and verify "Web Worker" message
 - [ ] Verify no "unknown method" warnings appear
@@ -120,11 +127,13 @@ if (loadingMethod === 'worker') {
 ## Phase 2: Add Enhanced Diagnostic Logging
 
 ### Overview
+
 Add detailed timing and progress logs throughout the video loading pipeline to identify bottlenecks.
 
 ### Changes Required:
 
 #### 1. Worker Loading Diagnostics
+
 **File**: `public/workers/video-processor.worker.js`
 **Changes**: Add timing logs at each stage of video processing
 
@@ -185,6 +194,7 @@ async function processVideoStream(videoUrl, blockId, options = {}) {
 ```
 
 #### 2. Coordinator Callback Timing
+
 **File**: `src/lib/videos/video-texture-loader.ts`
 **Changes**: Add logs to track callback registration and response times
 
@@ -222,6 +232,7 @@ if (responseTime > 10000) {
 ```
 
 #### 3. Video Element Loading Timing
+
 **File**: `src/lib/videos/video-texture-loader.ts`
 **Changes**: Add logs for video element creation and loading
 
@@ -229,7 +240,7 @@ if (responseTime > 10000) {
 // Add after line 423 (setting video.src from worker URL)
 if (!isProdEnv) {
   console.log(`[Coordinator] Setting video src from worker for ${blockId}`, {
-    url: message.videoUrl?.substring(0, 50) + '...',
+    url: message.videoUrl?.substring(0, 50) + "...",
     timestamp: Date.now(),
   });
 }
@@ -248,6 +259,7 @@ if (!isProdEnv) {
 ```
 
 #### 4. Component-Level Timing
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Add timing at component level
 
@@ -284,11 +296,13 @@ if (totalLoadTime > 10000) {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] TypeScript compilation passes: `pnpm typecheck`
 - [x] No console errors in development mode
 - [x] Logs only appear in development (`!isProdEnv`)
 
 #### Manual Verification:
+
 - [ ] Console shows detailed timing breakdown for video loads
 - [ ] Worker fetch/blob timing is visible
 - [ ] Near-timeout warnings appear for loads >10 seconds
@@ -299,11 +313,13 @@ if (totalLoadTime > 10000) {
 ## Phase 3: Implement Unit Tests
 
 ### Overview
+
 Create comprehensive unit tests for timeout behavior, fallback mechanism, and status reporting.
 
 ### Changes Required:
 
 #### 1. VideoTextureCoordinator Tests
+
 **File**: `src/lib/videos/__tests__/video-texture-loader.test.ts` (new file)
 **Changes**: Create test suite for coordinator
 
@@ -365,7 +381,7 @@ describe("VideoTextureCoordinator", () => {
       const loadPromise = coordinator.loadVideoTexture(
         "https://example.com/video.mp4",
         "test-block-id",
-        {}
+        {},
       );
 
       // Verify worker message was sent
@@ -374,7 +390,7 @@ describe("VideoTextureCoordinator", () => {
           type: "loadVideo",
           videoUrl: "https://example.com/video.mp4",
           blockId: "test-block-id",
-        })
+        }),
       );
 
       // Advance time to trigger timeout
@@ -408,12 +424,13 @@ describe("VideoTextureCoordinator", () => {
       const loadPromise = coordinator.loadVideoTexture(
         "https://example.com/video.mp4",
         "test-block-id",
-        {}
+        {},
       );
 
       // Simulate worker response
-      const messageHandler = mockWorker.addEventListener.mock.calls
-        .find(call => call[0] === "message")?.[1];
+      const messageHandler = mockWorker.addEventListener.mock.calls.find(
+        (call) => call[0] === "message",
+      )?.[1];
 
       messageHandler?.({
         data: {
@@ -446,7 +463,7 @@ describe("VideoTextureCoordinator", () => {
       const loadPromise = coordinator.loadVideoTexture(
         "https://example.com/video.mp4",
         "test-block-id",
-        {}
+        {},
       );
 
       // Check callback is registered
@@ -486,8 +503,9 @@ describe("VideoTextureCoordinator", () => {
       vi.advanceTimersByTime(2000);
 
       // Mock pong response for success
-      const messageHandler = mockWorker.addEventListener.mock.calls
-        .find(call => call[0] === "message")?.[1];
+      const messageHandler = mockWorker.addEventListener.mock.calls.find(
+        (call) => call[0] === "message",
+      )?.[1];
       messageHandler?.({ data: { type: "pong" } });
 
       const result = await initPromise;
@@ -529,6 +547,7 @@ describe("VideoTextureCoordinator", () => {
 ```
 
 #### 2. VideoMaterial Component Tests
+
 **File**: `src/components/r3f/blocks/video/__tests__/video-material.test.tsx` (new file)
 **Changes**: Test component behavior with different loading scenarios
 
@@ -626,12 +645,14 @@ describe("VideoMaterial", () => {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] All unit tests pass: `pnpm test:unit`
 - [ ] Test coverage for video-texture-loader.ts > 80%
 - [ ] Test coverage for video-material.tsx > 70%
 - [ ] Tests run in < 10 seconds
 
 #### Manual Verification:
+
 - [ ] Tests accurately simulate timeout scenarios
 - [ ] Fallback behavior is properly tested
 - [ ] Loading method tracking is verified
@@ -642,11 +663,13 @@ describe("VideoMaterial", () => {
 ## Phase 4: Add E2E Tests
 
 ### Overview
+
 Create end-to-end tests to verify video loading works correctly in real browser environment.
 
 ### Changes Required:
 
 #### 1. Video Loading E2E Test
+
 **File**: `tests/e2e/video-loading.spec.ts` (new file)
 **Changes**: Test actual video loading scenarios
 
@@ -675,24 +698,23 @@ test.describe("Video Loading with Web Worker", () => {
 
     // Check console logs for correct loading method
     const consoleLogs: string[] = [];
-    page.on("console", msg => {
+    page.on("console", (msg) => {
       if (msg.text().includes("Video loaded")) {
         consoleLogs.push(msg.text());
       }
     });
 
     // Verify worker was used for small video
-    expect(consoleLogs.some(log => log.includes("Video loaded using Web Worker")))
-      .toBeTruthy();
+    expect(consoleLogs.some((log) => log.includes("Video loaded using Web Worker"))).toBeTruthy();
   });
 
   test("should fallback to main thread on timeout", async ({ page }) => {
     test.setTimeout(120000); // 2 minute timeout
 
     // Mock slow network to trigger timeout
-    await page.route("**/large-test-video.mp4", async route => {
+    await page.route("**/large-test-video.mp4", async (route) => {
       // Delay response to trigger 15-second timeout
-      await new Promise(resolve => setTimeout(resolve, 16000));
+      await new Promise((resolve) => setTimeout(resolve, 16000));
       await route.continue();
     });
 
@@ -708,16 +730,18 @@ test.describe("Video Loading with Web Worker", () => {
 
     // Check console logs
     const consoleLogs: string[] = [];
-    page.on("console", msg => {
+    page.on("console", (msg) => {
       if (msg.text().includes("Video loaded")) {
         consoleLogs.push(msg.text());
       }
     });
 
     // Verify main thread was used after timeout
-    expect(consoleLogs.some(log =>
-      log.includes("Video loaded on main thread (after worker retry attempts)")
-    )).toBeTruthy();
+    expect(
+      consoleLogs.some((log) =>
+        log.includes("Video loaded on main thread (after worker retry attempts)"),
+      ),
+    ).toBeTruthy();
   });
 
   test("should show loading progress", async ({ page }) => {
@@ -756,6 +780,7 @@ test.describe("Video Loading with Web Worker", () => {
 ```
 
 #### 2. Test Fixtures
+
 **File**: `tests/fixtures/` (new directory)
 **Changes**: Add test video files
 
@@ -769,11 +794,13 @@ tests/fixtures/
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] E2E tests pass: `pnpm test:e2e`
 - [ ] Tests run in CI/CD pipeline
 - [ ] No flaky tests (run 5 times successfully)
 
 #### Manual Verification:
+
 - [ ] E2E tests accurately simulate real user interactions
 - [ ] Timeout scenario is properly tested
 - [ ] Error handling is verified
@@ -784,11 +811,13 @@ tests/fixtures/
 ## Phase 5: Add Worker Progress Tracking
 
 ### Overview
+
 Enhance the worker to report loading progress for better visibility into what stage is taking time.
 
 ### Changes Required:
 
 #### 1. Worker Progress Messages
+
 **File**: `public/workers/video-processor.worker.js`
 **Changes**: Add progress reporting during fetch
 
@@ -800,31 +829,31 @@ async function processVideoStream(videoUrl, blockId, options = {}) {
   try {
     // Report start
     self.postMessage({
-      type: 'videoProgress',
+      type: "videoProgress",
       blockId,
-      stage: 'started',
+      stage: "started",
       progress: 0,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // ... existing metadata fetch ...
 
     self.postMessage({
-      type: 'videoProgress',
+      type: "videoProgress",
       blockId,
-      stage: 'metadata-fetched',
+      stage: "metadata-fetched",
       progress: 10,
       metadata: {
         contentLength: metadata.contentLength,
-        contentType: metadata.contentType
+        contentType: metadata.contentType,
       },
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // Fetch with progress tracking
     const videoResponse = await fetch(videoUrl);
     const reader = videoResponse.body.getReader();
-    const contentLength = +videoResponse.headers.get('Content-Length');
+    const contentLength = +videoResponse.headers.get("Content-Length");
 
     let receivedLength = 0;
     let chunks = [];
@@ -844,13 +873,13 @@ async function processVideoStream(videoUrl, blockId, options = {}) {
 
       if (now - lastProgressUpdate > 500 || progress % 10 === 0) {
         self.postMessage({
-          type: 'videoProgress',
+          type: "videoProgress",
           blockId,
-          stage: 'downloading',
-          progress: 10 + (progress * 0.7), // 10-80% for download
+          stage: "downloading",
+          progress: 10 + progress * 0.7, // 10-80% for download
           bytesReceived: receivedLength,
           bytesTotal: contentLength,
-          timestamp: now
+          timestamp: now,
         });
         lastProgressUpdate = now;
       }
@@ -858,11 +887,11 @@ async function processVideoStream(videoUrl, blockId, options = {}) {
 
     // Report blob creation start
     self.postMessage({
-      type: 'videoProgress',
+      type: "videoProgress",
       blockId,
-      stage: 'creating-blob',
+      stage: "creating-blob",
       progress: 80,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // Create blob from chunks
@@ -871,21 +900,21 @@ async function processVideoStream(videoUrl, blockId, options = {}) {
     // ... existing blob URL creation ...
 
     self.postMessage({
-      type: 'videoProgress',
+      type: "videoProgress",
       blockId,
-      stage: 'completed',
+      stage: "completed",
       progress: 100,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // ... existing success message ...
   } catch (error) {
     self.postMessage({
-      type: 'videoProgress',
+      type: "videoProgress",
       blockId,
-      stage: 'error',
+      stage: "error",
       error: error.message,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // ... existing error handling ...
@@ -894,6 +923,7 @@ async function processVideoStream(videoUrl, blockId, options = {}) {
 ```
 
 #### 2. Coordinator Progress Handling
+
 **File**: `src/lib/videos/video-texture-loader.ts`
 **Changes**: Handle progress messages from worker
 
@@ -952,6 +982,7 @@ this.progressCallbacks.delete(blockId);
 ```
 
 #### 3. Component Progress Display
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Display loading progress
 
@@ -988,11 +1019,13 @@ if (isLoading) {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] TypeScript compilation passes: `pnpm typecheck`
 - [ ] Worker continues to function with progress messages
 - [ ] No performance regression from progress tracking
 
 #### Manual Verification:
+
 - [ ] Progress updates appear in console during video load
 - [ ] Can identify which stage is slowest (download vs blob creation)
 - [ ] Progress reaches 100% before load completes
@@ -1005,6 +1038,7 @@ if (isLoading) {
 ## Testing Strategy
 
 ### Unit Tests:
+
 - Test timeout behavior with fake timers
 - Test worker initialization retry logic
 - Test loading method tracking accuracy
@@ -1012,12 +1046,14 @@ if (isLoading) {
 - Mock Worker API and video elements
 
 ### Integration Tests:
+
 - Test actual Worker creation and messaging
 - Test video element creation and events
 - Verify logging output in different scenarios
 - Test performance monitoring integration
 
 ### Manual Testing Steps:
+
 1. Load a small video (<1MB) and verify worker loading succeeds
 2. Load a large video (>50MB) and observe timeout behavior
 3. Disable workers in browser and verify main thread loading

@@ -5,6 +5,7 @@
 This PR addresses critical security issues and code organization problems identified in the guest permissions implementation:
 
 1. **Security Vulnerability**: Guest users could bypass restrictions and create projects through multiple entry points:
+
    - Through the onboarding flow when joining a workspace
    - Through direct navigation to `/new` route
    - Through API calls that weren't properly validated
@@ -28,11 +29,13 @@ This PR addresses critical security issues and code organization problems identi
 ### Code Organization Improvements
 
 - **Centralized Routing Helper**: Created `getProjectUrl()` helper in `src/lib/routing/role-helpers.ts` that:
+
   - Determines correct project URL based on user role
   - Eliminates duplicate conditional logic across dashboard components
   - Ensures consistent routing behavior for guest vs regular users
 
 - **Consolidated Permission Helpers**: Created `convex/permissions/helpers.ts` with:
+
   - `canInviteToWorkspace()`: Check if user can invite others
   - `canEditProject()`: Check if user can edit a project
   - `canManageFolder()`: Check if user can manage folders
@@ -46,15 +49,18 @@ This PR addresses critical security issues and code organization problems identi
 ## How does this affect users?
 
 ### Guest Users
+
 - Can no longer create projects through any vector (properly enforced)
 - Are consistently redirected to read-only views (`/projects/shared`)
 - Have a clearer, more predictable experience when joining workspaces
 
 ### Regular Users (Admins/Editors)
+
 - No change in functionality
 - Continued full access to create and edit projects
 
 ### Developers
+
 - Cleaner, more maintainable codebase
 - Single source of truth for role definitions
 - Centralized permission logic reduces bugs
@@ -62,12 +68,14 @@ This PR addresses critical security issues and code organization problems identi
 ## Technical Details
 
 ### Files Changed
+
 - **Security**: 4 files updated to block guest project creation
 - **Routing**: 5 components updated to use centralized `getProjectUrl()` helper
 - **Permissions**: New centralized helper file + 2 files updated to use it
 - **Cleanup**: 2 files updated to remove legacy role definitions
 
 ### Testing
+
 - [x] Unit tests pass (121 tests passing)
 - [ ] Manual testing of guest user flows
 - [ ] Manual testing of regular user flows
@@ -82,4 +90,5 @@ No database migrations or breaking changes. The changes are backward compatible 
 Fixed critical security issue where guest users could create projects through onboarding flow and improved permission system organization
 
 ---
+
 Generated with Claude Code

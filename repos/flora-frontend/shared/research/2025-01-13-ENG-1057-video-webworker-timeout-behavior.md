@@ -5,7 +5,17 @@ git_commit: 7c38aa71cb4132dcab34509ef345d032bb7e2e12
 branch: eng-1057-video-webworker
 repository: eng-1057-video-webworker
 topic: "Video WebWorker timeout after 15 seconds, main thread fallback, and confusing logging behavior"
-tags: [research, codebase, video-loading, webworker, timeout, main-thread-fallback, performance, eng-1057]
+tags:
+  [
+    research,
+    codebase,
+    video-loading,
+    webworker,
+    timeout,
+    main-thread-fallback,
+    performance,
+    eng-1057,
+  ]
 status: complete
 last_updated: 2025-01-13
 last_updated_by: Matan Shavit
@@ -24,6 +34,7 @@ last_updated_by: Matan Shavit
 Why is the webworker timing out after 15 seconds and failing, why does it say the main thread is being used and why does it then say the web worker did the loading? The point of the web worker was to get the video loading off the main thread to stop blocking it.
 
 Console logs showing the confusing behavior:
+
 - Worker initializes successfully
 - Video load times out after 15 seconds
 - System falls back to main thread
@@ -43,6 +54,7 @@ The video loading system (`src/lib/videos/video-texture-loader.ts`) implements a
 2. **Fallback Path**: Main thread loading when workers fail or timeout
 
 The `VideoTextureCoordinator` class manages this with aggressive retry logic:
+
 - Initial attempt + 3 retries for worker initialization
 - Exponential backoff between retries (1s, 2s, 4s)
 - 5-second ping timeout to verify worker health
@@ -65,6 +77,7 @@ const workerTimeout = setTimeout(() => {
 ```
 
 When this timeout fires:
+
 1. The promise is rejected with a detailed error
 2. The catch block at line 368 catches the error
 3. If `this.worker` still exists, it retries with `loadInMainThread()` at line 373
@@ -95,11 +108,13 @@ The `isUsingWorker()` method simply returns `!!this.worker` (line 625). The prob
 ### Why the Worker Reference Persists
 
 The worker is only terminated in specific scenarios:
+
 - During `handleWorkerError()` when the worker process crashes (line 289-292)
 - During explicit `dispose()` or `disposeAll()` calls (lines 612-615)
 - During recovery attempts after worker errors (line 290)
 
 However, when a video load times out, this is **not a worker error**—it's a timeout in the main thread waiting for the worker. The worker itself may still be functioning, just slow. Therefore:
+
 - The worker reference remains intact
 - The `initialized` flag stays `true`
 - The `isUsingWorker()` check returns `true`
@@ -119,6 +134,7 @@ This fallback is **transparent to the caller**—the component doesn't know whic
 ### Performance Tracking
 
 The `VideoPerformanceMonitor` tracks load times and identifies slow loads:
+
 - Threshold for "slow": 2000ms
 - Your video took 15001ms (worker timeout) + 15476ms (main thread) = 30477ms total
 - The monitor correctly logs this as a slow load
@@ -144,6 +160,7 @@ The system uses these patterns:
 5. **Graceful Degradation**: Automatic fallback maintains functionality
 
 Current retry configuration:
+
 - Worker initialization: 3 retries, 1s base delay, exponential backoff
 - Worker recovery after error: 1 retry, 500ms delay
 - No retries for individual video timeouts (immediate fallback)
@@ -151,6 +168,7 @@ Current retry configuration:
 ## Historical Context
 
 From the Linear ticket (ENG-1057):
+
 - Issue identified on 2025-10-10
 - Affects WebGL branch specifically (not ReactFlow implementation)
 - Happens consistently, especially for uploaded videos
