@@ -127,9 +127,9 @@ if (currentUserRole?.role === UserRoleEnum.GUEST) {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `npm run typecheck`
-- [ ] Linting passes: `npm run lint`
-- [ ] Build succeeds: `npm run build`
+- [x] Type checking passes: `npm run typecheck`
+- [x] Linting passes: `npm run lint`
+- [x] Build succeeds: `npm run build`
 
 #### Manual Verification:
 - [ ] Guest user accepting workspace invite redirects to `/projects/shared`
