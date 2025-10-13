@@ -132,9 +132,9 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] TypeScript compilation passes: `pnpm typecheck`
-- [ ] Build succeeds: `pnpm build`
-- [ ] No linting errors: `pnpm lint`
+- [x] TypeScript compilation passes: `pnpm typecheck`
+- [x] Build succeeds: `pnpm build`
+- [x] No linting errors: `pnpm lint`
 
 #### Manual Verification:
 - [ ] Guest user accessing `/projects/[id]` redirects to `/projects/readonly/[id]`
