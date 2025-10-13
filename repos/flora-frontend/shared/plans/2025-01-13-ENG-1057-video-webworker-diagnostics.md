@@ -105,9 +105,9 @@ if (loadingMethod === 'worker') {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] TypeScript compilation passes: `pnpm typecheck`
-- [ ] Existing tests pass: `pnpm test:unit`
-- [ ] No linting errors: `pnpm lint`
+- [x] TypeScript compilation passes: `pnpm typecheck`
+- [x] Existing tests pass: `pnpm test:unit`
+- [x] No linting errors: `pnpm lint`
 
 #### Manual Verification:
 - [ ] Load a video and verify correct "main thread" message appears after timeout
@@ -284,9 +284,9 @@ if (totalLoadTime > 10000) {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] TypeScript compilation passes: `pnpm typecheck`
-- [ ] No console errors in development mode
-- [ ] Logs only appear in development (`!isProdEnv`)
+- [x] TypeScript compilation passes: `pnpm typecheck`
+- [x] No console errors in development mode
+- [x] Logs only appear in development (`!isProdEnv`)
 
 #### Manual Verification:
 - [ ] Console shows detailed timing breakdown for video loads

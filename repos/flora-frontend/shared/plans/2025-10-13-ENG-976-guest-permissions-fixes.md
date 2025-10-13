@@ -209,9 +209,9 @@ const projectUrl = getProjectUrl(project._id, userRole);
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `npm run typecheck`
-- [ ] Linting passes: `npm run lint`
-- [ ] Unit tests pass: `npm run test:unit`
+- [x] Type checking passes: `npm run typecheck`
+- [x] Linting passes: `npm run lint`
+- [x] Unit tests pass: `npm run test:unit`
 - [ ] Build succeeds: `npm run build`
 
 #### Manual Verification:
@@ -289,9 +289,9 @@ export function isFolderActionDisabled(
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `npm run typecheck`
-- [ ] Linting passes: `npm run lint`
-- [ ] Build succeeds: `npm run build`
+- [x] Type checking passes: `npm run typecheck`
+- [x] Linting passes: `npm run lint`
+- [x] Build succeeds: `npm run build`
 
 #### Manual Verification:
 - [ ] Permission checks work correctly in all locations
@@ -327,9 +327,9 @@ Remove unused legacy role definitions to avoid confusion.
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `npm run typecheck`
-- [ ] Build succeeds: `npm run build`
-- [ ] No broken imports
+- [x] Type checking passes: `npm run typecheck`
+- [x] Build succeeds: `npm run build`
+- [x] No broken imports
 
 #### Manual Verification:
 - [ ] Application functions normally
