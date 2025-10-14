@@ -20,9 +20,11 @@ last_updated_by: Claude Code
 **Repository**: eng-982-remove-from-workspace
 
 ## Research Question
+
 In convex/currentUser/mutations.ts, removeUserFromWorkspace was modified to ensure permissions are revoked to a workspace when removing a user. Now in addition, we would like to delete any outstanding invitation to that user for the workspace. Find all relevant files and code and compile a summary to use in planning.
 
 ## Summary
+
 The `removeUserFromWorkspace` function in `convex/currentUser/mutations.ts` currently removes a user's membership from a workspace and handles workspace switching, but does not delete any outstanding invitations for that user. The workspace invitation system stores invitations in a `workspaceInvitations` table with email-based and link-based invitations. To complete ENG-982, we need to query and delete any email-specific invitations for the removed user after deleting their membership.
 
 ## Detailed Findings
@@ -32,6 +34,7 @@ The `removeUserFromWorkspace` function in `convex/currentUser/mutations.ts` curr
 **File**: `convex/currentUser/mutations.ts:58-140`
 
 The current implementation:
+
 1. Validates admin permissions (lines 65-67)
 2. Gets and validates the membership to remove (lines 70-78)
 3. **Deletes the membership** (line 81)
@@ -46,6 +49,7 @@ The current implementation:
 #### Database Schema
 
 **PostgreSQL Schema** (`src/db/schema.ts:69-77`):
+
 ```typescript
 export const workspaceInvitations = pgTable("flora_workspace_invitations", {
   id: serial("id").primaryKey().notNull(),
@@ -59,6 +63,7 @@ export const workspaceInvitations = pgTable("flora_workspace_invitations", {
 ```
 
 **Convex Schema** (`convex/schema.ts:64-67`):
+
 ```typescript
 workspaceInvitations: defineTable(workspaceInvitationsValidator)
   .index("by_pg_id", ["pg_id"])
@@ -67,6 +72,7 @@ workspaceInvitations: defineTable(workspaceInvitationsValidator)
 ```
 
 **Convex Validator** (`convex/modelValidators.ts:29-37`):
+
 ```typescript
 export const workspaceInvitationsValidator = v.object({
   pg_id: v.optional(v.number()),
@@ -82,6 +88,7 @@ export const workspaceInvitationsValidator = v.object({
 #### Invitation Types
 
 1. **Email Invitations**:
+
    - Have `email` field set to specific user email
    - Single-use (deleted after acceptance at `convex/currentUser/mutations.ts:309-311`)
    - Created via `inviteEmailToWorkspace` mutation
@@ -95,7 +102,9 @@ export const workspaceInvitationsValidator = v.object({
 ### Key Query Patterns
 
 #### Query Invitations by Email
+
 **Pattern used in** `convex/currentUser/queries.ts:157-161`:
+
 ```typescript
 const invitations = await ctx.db
   .query("workspaceInvitations")
@@ -104,7 +113,9 @@ const invitations = await ctx.db
 ```
 
 #### Query by Email and Workspace
+
 **Pattern used in** `convex/workspaceMemberships/helpers.ts:224-236`:
+
 ```typescript
 const invitation = await ctx.db
   .query("workspaceInvitations")
@@ -116,16 +127,20 @@ const invitation = await ctx.db
 ### Invitation Creation Flow
 
 #### Email Invitation Creation
+
 **File**: `convex/workspaceMemberships/mutations.ts:89-193`
+
 - Validates permissions and plan
 - Checks if user is already a member
 - Creates or regenerates invitation with email field set
 - Sends email via Resend
 
 #### Helper Functions
+
 **File**: `convex/workspaceMemberships/helpers.ts`
 
 **createWorkspaceInvitation** (lines 241-260):
+
 ```typescript
 const invitationId = await ctx.db.insert("workspaceInvitations", {
   workspaceId,
@@ -138,6 +153,7 @@ const invitationId = await ctx.db.insert("workspaceInvitations", {
 ```
 
 **regenerateWorkspaceInvitationCode** (lines 265-278):
+
 - Updates existing invitation with new code and expiration
 
 ### Invitation Acceptance and Deletion
@@ -145,6 +161,7 @@ const invitationId = await ctx.db.insert("workspaceInvitations", {
 **File**: `convex/currentUser/mutations.ts:254-331` (`acceptInvitation`)
 
 Key behavior at lines 309-311:
+
 ```typescript
 // Link invitations are reusable, but email invitations should be deleted
 if (invitation.email) {
@@ -153,6 +170,7 @@ if (invitation.email) {
 ```
 
 This shows that:
+
 - Email invitations are deleted after successful acceptance
 - Link invitations (email=null) are kept for reuse
 - No other automatic cleanup exists
@@ -164,17 +182,20 @@ This shows that:
 ## Code References
 
 ### Core Files
+
 - `convex/currentUser/mutations.ts:58-140` - removeUserFromWorkspace function to modify
 - `convex/currentUser/mutations.ts:254-331` - acceptInvitation shows deletion pattern
 - `convex/workspaceMemberships/mutations.ts:89-193` - Email invitation creation
 - `convex/workspaceMemberships/helpers.ts:224-278` - Invitation helper functions
 
 ### Schema Files
+
 - `src/db/schema.ts:69-77` - PostgreSQL schema definition
 - `convex/schema.ts:64-67` - Convex schema with indexes
 - `convex/modelValidators.ts:29-37` - Convex validator
 
 ### Query Patterns
+
 - `convex/currentUser/queries.ts:157-161` - Query by email
 - `convex/workspaceMemberships/helpers.ts:224-236` - Query by email and workspace
 - `convex/admin/workspaces/queries.ts:178-182` - Query by workspace
@@ -182,6 +203,7 @@ This shows that:
 ## Architecture Documentation
 
 ### Invitation Lifecycle
+
 1. **Creation**: UUID code generated, 7-day expiration set
 2. **Storage**: Saved with email (specific) or without (link)
 3. **Acceptance**: Validated for expiration and email match
@@ -191,11 +213,13 @@ This shows that:
    - **Gap**: No deletion when user is removed from workspace
 
 ### Database Indexes
+
 - `by_email`: Efficient lookup by user email
 - `by_workspace_id`: List all invitations for a workspace
 - `by_pg_id`: PostgreSQL migration support
 
 ### Permission Model
+
 - Only admins can remove users from workspaces
 - Admins and editors can invite users (guests cannot)
 - Email invitations require pro/agency plan
@@ -206,6 +230,7 @@ To complete ENG-982, we need to:
 
 1. **Add invitation deletion logic** to `removeUserFromWorkspace` after line 81
 2. **Query pattern** to use:
+
    ```typescript
    // Get the removed user's email
    const removedUser = await ctx.db.get(removedUserId);

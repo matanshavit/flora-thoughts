@@ -7,6 +7,7 @@ When removing a user from a workspace, the system currently deletes their member
 ## Current State Analysis
 
 The `removeUserFromWorkspace` mutation in `convex/currentUser/mutations.ts:58-140` currently:
+
 1. Validates admin permissions
 2. Deletes the workspace membership (line 81)
 3. Updates the removed user's `currentWorkspaceId` if needed
@@ -15,6 +16,7 @@ The `removeUserFromWorkspace` mutation in `convex/currentUser/mutations.ts:58-14
 **Missing**: Deletion of outstanding email invitations for the removed user to that workspace.
 
 ### Key Discoveries:
+
 - Email invitations are stored with the user's email address and are single-use
 - Link invitations (email=null) are reusable and should NOT be deleted
 - The pattern for deleting email invitations already exists at `convex/currentUser/mutations.ts:309-311`
@@ -23,12 +25,14 @@ The `removeUserFromWorkspace` mutation in `convex/currentUser/mutations.ts:58-14
 ## Desired End State
 
 After implementation, when an admin removes a user from a workspace:
+
 1. The user's membership is deleted (existing behavior)
 2. All email-specific invitations for that user to that workspace are deleted (new behavior)
 3. Link invitations remain untouched (they are not user-specific)
 4. The removed user cannot rejoin using an old invitation link sent to their email
 
 ### Verification:
+
 - Removing a user deletes their outstanding email invitations
 - Link invitations continue to work for any user
 - No orphaned invitations remain in the database after user removal
@@ -49,11 +53,13 @@ Add invitation deletion logic immediately after deleting the membership (after l
 ## Phase 1: Implement Invitation Deletion Logic
 
 ### Overview
+
 Add the logic to delete outstanding email invitations when removing a user from a workspace.
 
 ### Changes Required:
 
 #### 1. Update removeUserFromWorkspace Mutation
+
 **File**: `convex/currentUser/mutations.ts`
 **Changes**: Add invitation deletion logic after line 81
 
@@ -147,11 +153,13 @@ export const removeUserFromWorkspace = authenticatedMutation({
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Code compiles without errors: `pnpm typecheck`
 - [x] Convex deployment succeeds: `pnpm convex deploy`
 - [x] No linting errors: `pnpm lint`
 
 #### Manual Verification:
+
 - [ ] Create an email invitation for a user to a workspace
 - [ ] Remove that user from the workspace via the admin UI
 - [ ] Verify the invitation is deleted from the database
@@ -166,11 +174,13 @@ export const removeUserFromWorkspace = authenticatedMutation({
 ## Phase 2: Add Integration Tests
 
 ### Overview
+
 Add tests to verify the invitation deletion behavior works correctly.
 
 ### Changes Required:
 
 #### 1. Create Test for Invitation Deletion
+
 **File**: `convex/currentUser/mutations.test.ts` (create if doesn't exist)
 **Changes**: Add test cases for the new behavior
 
@@ -270,10 +280,12 @@ test("removeUserFromWorkspace preserves link invitations", async () => {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] Tests pass: `pnpm test:unit`
 - [ ] Test coverage includes both email and link invitation scenarios
 
 #### Manual Verification:
+
 - [ ] Tests accurately reflect the production behavior
 - [ ] Edge cases are covered (user with no email, multiple invitations, etc.)
 
@@ -282,17 +294,20 @@ test("removeUserFromWorkspace preserves link invitations", async () => {
 ## Testing Strategy
 
 ### Unit Tests:
+
 - Test that email invitations are deleted when user is removed
 - Test that link invitations are NOT deleted when user is removed
 - Test that invitations for other workspaces are not affected
 - Test null safety (user without email, no invitations exist)
 
 ### Integration Tests:
+
 - Full flow: invite user → remove user → verify invitation deleted
 - Verify removed user cannot accept deleted invitation
 - Verify link invitations continue to work after a different user is removed
 
 ### Manual Testing Steps:
+
 1. As admin, invite user@example.com to workspace via email
 2. Before user accepts, remove them from workspace member list
 3. Check database to confirm invitation was deleted
@@ -310,6 +325,7 @@ test("removeUserFromWorkspace preserves link invitations", async () => {
 ## Migration Notes
 
 No data migration required. The change is backwards compatible:
+
 - Existing invitations remain unchanged
 - New behavior only applies to future removals
 - No schema changes needed
