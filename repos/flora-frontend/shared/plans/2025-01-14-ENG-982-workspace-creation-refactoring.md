@@ -122,13 +122,13 @@ import { createWorkspaceMembership } from "../workspaceMemberships/helpers";
 
 #### Automated Verification:
 
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Code compiles without errors: `pnpm build`
+- [x] Type checking passes: `pnpm typecheck`
+- [ ] Code compiles without errors: `pnpm build` (skipped - database connection required)
 
 #### Manual Verification:
 
-- [ ] New helper function is correctly typed
-- [ ] All parameters are properly defined
+- [x] New helper function is correctly typed
+- [x] All parameters are properly defined
 
 ---
 
@@ -210,9 +210,9 @@ import { createWorkspaceMembership } from "../workspaceMemberships/helpers";
 
 #### Automated Verification:
 
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Unit tests pass: `pnpm test:unit`
-- [ ] Build succeeds: `pnpm build`
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Unit tests pass: `pnpm test:unit`
+- [ ] Build succeeds: `pnpm build` (skipped - database connection required)
 
 #### Manual Verification:
 
@@ -306,9 +306,9 @@ import { createWorkspaceMembership } from "../workspaceMemberships/helpers";
 
 #### Automated Verification:
 
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Unit tests pass: `pnpm test:unit`
-- [ ] Build succeeds: `pnpm build`
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Unit tests pass: `pnpm test:unit`
+- [ ] Build succeeds: `pnpm build` (skipped - database connection required)
 
 #### Manual Verification:
 
@@ -334,10 +334,10 @@ None - this phase is for verification only.
 
 #### Automated Verification:
 
-- [ ] Full type checking passes: `pnpm typecheck`
-- [ ] All unit tests pass: `pnpm test:unit`
-- [ ] Build completes without errors: `pnpm build`
-- [ ] Linting passes: `pnpm lint`
+- [x] Full type checking passes: `pnpm typecheck`
+- [x] All unit tests pass: `pnpm test:unit`
+- [ ] Build completes without errors: `pnpm build` (skipped - database connection required)
+- [x] Linting passes: `pnpm lint`
 
 #### Manual Verification:
 
