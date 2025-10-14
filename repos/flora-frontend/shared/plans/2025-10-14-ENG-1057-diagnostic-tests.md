@@ -11,6 +11,7 @@ The video loading system has a dual-path architecture with web worker as primary
 ## Desired End State
 
 After implementing these diagnostic tests, we will have:
+
 - Clear identification of which stage(s) cause the 15+ second delays
 - Automated reproduction of timeout scenarios
 - Performance baseline measurements for comparison with non-worker implementation
@@ -18,6 +19,7 @@ After implementing these diagnostic tests, we will have:
 - Confidence that worker loading achieves parity with the old implementation
 
 ### Key Discoveries:
+
 - Worker timeout hardcoded at 15 seconds: `src/lib/videos/video-texture-loader.ts:410`
 - Diagnostic logging added in commit 00076734e tracks timing at each stage
 - No existing tests for video loading components or workers
@@ -39,11 +41,13 @@ Create diagnostic tests that measure and validate each stage of video loading, w
 ## Phase 1: Worker Pipeline Diagnostic Tests
 
 ### Overview
+
 Create unit tests that isolate and measure each stage of the worker video loading pipeline to identify bottlenecks.
 
 ### Changes Required:
 
 #### 1. Worker Stage Timing Tests
+
 **File**: `src/lib/videos/__tests__/video-texture-loader-diagnostics.test.ts` (new file)
 **Changes**: Test suite focused on measuring stage timings
 
@@ -78,12 +82,12 @@ describe("Video Worker Pipeline Diagnostics", () => {
       const loadPromise = coordinator.loadVideoTexture(
         "https://example.com/test-video.mp4",
         "test-block-metadata",
-        {}
+        {},
       );
 
       // Simulate worker metadata response with timing
       const messageHandler = mockWorker.addEventListener.mock.calls.find(
-        call => call[0] === "message"
+        (call) => call[0] === "message",
       )?.[1];
 
       // Simulate metadata stage (should be fast)
@@ -94,22 +98,22 @@ describe("Video Worker Pipeline Diagnostics", () => {
             blockId: "test-block-metadata",
             metadata: {
               contentType: "video/mp4",
-              contentLength: 5242880 // 5MB
-            }
-          }
+              contentLength: 5242880, // 5MB
+            },
+          },
         });
       }, 100); // 100ms for metadata
 
       vi.advanceTimersByTime(100);
 
       // Capture timing from console logs
-      const consoleSpy = vi.spyOn(console, 'log');
+      const consoleSpy = vi.spyOn(console, "log");
 
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining("[Worker] Metadata fetched"),
         expect.objectContaining({
-          duration: expect.any(Number)
-        })
+          duration: expect.any(Number),
+        }),
       );
     });
 
@@ -119,11 +123,11 @@ describe("Video Worker Pipeline Diagnostics", () => {
       const loadPromise = coordinator.loadVideoTexture(
         "https://example.com/large-video.mp4",
         "test-block-fetch",
-        {}
+        {},
       );
 
       const messageHandler = mockWorker.addEventListener.mock.calls.find(
-        call => call[0] === "message"
+        (call) => call[0] === "message",
       )?.[1];
 
       // Simulate slow fetch (this is likely the bottleneck)
@@ -138,9 +142,9 @@ describe("Video Worker Pipeline Diagnostics", () => {
               total: 12000,
               metadata: 100,
               fetch: 10000, // 10 seconds for fetch
-              blob: 1900
-            }
-          }
+              blob: 1900,
+            },
+          },
         });
       }, 12000);
 
@@ -157,11 +161,11 @@ describe("Video Worker Pipeline Diagnostics", () => {
       const loadPromise = coordinator.loadVideoTexture(
         "https://example.com/huge-video.mp4",
         "test-block-blob",
-        {}
+        {},
       );
 
       const messageHandler = mockWorker.addEventListener.mock.calls.find(
-        call => call[0] === "message"
+        (call) => call[0] === "message",
       )?.[1];
 
       // Simulate slow blob creation
@@ -176,9 +180,9 @@ describe("Video Worker Pipeline Diagnostics", () => {
               total: 8000,
               metadata: 100,
               fetch: 3000,
-              blob: 4900 // 4.9 seconds for blob creation
-            }
-          }
+              blob: 4900, // 4.9 seconds for blob creation
+            },
+          },
         });
       }, 8000);
 
@@ -194,7 +198,7 @@ describe("Video Worker Pipeline Diagnostics", () => {
       const loadPromise = coordinator.loadVideoTexture(
         "https://example.com/timeout-video.mp4",
         "test-block-timeout",
-        {}
+        {},
       );
 
       // Don't send response to trigger timeout
@@ -217,21 +221,17 @@ describe("Video Worker Pipeline Diagnostics", () => {
       const promises = [];
       for (let i = 0; i < 5; i++) {
         promises.push(
-          coordinator.loadVideoTexture(
-            `https://example.com/video-${i}.mp4`,
-            `block-${i}`,
-            {}
-          )
+          coordinator.loadVideoTexture(`https://example.com/video-${i}.mp4`, `block-${i}`, {}),
         );
       }
 
       // Simulate progressively slower responses (memory pressure)
       const messageHandler = mockWorker.addEventListener.mock.calls.find(
-        call => call[0] === "message"
+        (call) => call[0] === "message",
       )?.[1];
 
       for (let i = 0; i < 5; i++) {
-        const delay = 1000 + (i * 2000); // Increasing delays
+        const delay = 1000 + i * 2000; // Increasing delays
         setTimeout(() => {
           messageHandler?.({
             data: {
@@ -243,9 +243,9 @@ describe("Video Worker Pipeline Diagnostics", () => {
                 total: delay,
                 metadata: 100,
                 fetch: delay * 0.4,
-                blob: delay * 0.5 // Blob creation gets slower
-              }
-            }
+                blob: delay * 0.5, // Blob creation gets slower
+              },
+            },
           });
         }, delay);
       }
@@ -253,9 +253,7 @@ describe("Video Worker Pipeline Diagnostics", () => {
       vi.advanceTimersByTime(11000);
 
       // Later videos should show degraded blob performance
-      expect(timingCapture[`block-4`].blob).toBeGreaterThan(
-        timingCapture[`block-0`].blob * 2
-      );
+      expect(timingCapture[`block-4`].blob).toBeGreaterThan(timingCapture[`block-0`].blob * 2);
     });
   });
 });
@@ -264,12 +262,14 @@ describe("Video Worker Pipeline Diagnostics", () => {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Tests identify which stage takes longest: `pnpm test:unit -- video-texture-loader-diagnostics`
 - [x] Memory pressure patterns detected in concurrent load tests
 - [x] Timeout stage identification works correctly
 - [x] All timing measurements captured accurately
 
 #### Manual Verification:
+
 - [ ] Run tests with actual video URLs to see real timing patterns
 - [ ] Confirm timing matches production observations
 - [ ] Verify bottleneck stage aligns with user reports
@@ -279,11 +279,13 @@ describe("Video Worker Pipeline Diagnostics", () => {
 ## Phase 2: Comparison Tests (Worker vs Main Thread)
 
 ### Overview
+
 Create tests that directly compare performance between worker and main thread paths to verify parity.
 
 ### Changes Required:
 
 #### 1. Performance Comparison Tests
+
 **File**: `src/lib/videos/__tests__/video-loading-performance.test.ts` (new file)
 **Changes**: Side-by-side performance comparison
 
@@ -305,18 +307,14 @@ describe("Worker vs Main Thread Performance Comparison", () => {
       // Test worker path
       await coordinator.initialize();
       const workerStart = performance.now();
-      const workerResult = await coordinator.loadVideoTexture(
-        videoUrl, "worker-test", {}
-      );
+      const workerResult = await coordinator.loadVideoTexture(videoUrl, "worker-test", {});
       const workerTime = performance.now() - workerStart;
 
       // Force main thread path
       coordinator.dispose();
       coordinator = new VideoTextureCoordinator();
       const mainStart = performance.now();
-      const mainResult = await coordinator.loadVideoTexture(
-        videoUrl, "main-test", {}
-      );
+      const mainResult = await coordinator.loadVideoTexture(videoUrl, "main-test", {});
       const mainTime = performance.now() - mainStart;
 
       // Worker should be faster for small videos
@@ -326,15 +324,15 @@ describe("Worker vs Main Thread Performance Comparison", () => {
       console.log("Performance Comparison:", {
         worker: workerTime,
         main: mainTime,
-        ratio: workerTime / mainTime
+        ratio: workerTime / mainTime,
       });
     });
 
     it("should identify videos that timeout in worker but succeed on main thread", async () => {
       const problematicVideos = [
         "https://example.com/uploaded-video.mp4", // User uploaded
-        "https://example.com/large-video.mp4",    // >50MB
-        "https://example.com/slow-cdn-video.mp4"  // Slow server
+        "https://example.com/large-video.mp4", // >50MB
+        "https://example.com/slow-cdn-video.mp4", // Slow server
       ];
 
       const results = [];
@@ -348,9 +346,7 @@ describe("Worker vs Main Thread Performance Comparison", () => {
         try {
           await Promise.race([
             coordinator.loadVideoTexture(videoUrl, `worker-${videoUrl}`, {}),
-            new Promise((_, reject) =>
-              setTimeout(() => reject(new Error("Test timeout")), 5000)
-            )
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Test timeout")), 5000)),
           ]);
           workerSuccess = true;
         } catch (e) {
@@ -365,9 +361,7 @@ describe("Worker vs Main Thread Performance Comparison", () => {
         let mainSuccess = false;
 
         try {
-          const result = await coordinator.loadVideoTexture(
-            videoUrl, `main-${videoUrl}`, {}
-          );
+          const result = await coordinator.loadVideoTexture(videoUrl, `main-${videoUrl}`, {});
           mainSuccess = true;
         } catch (e) {
           // Main thread also failed
@@ -380,12 +374,12 @@ describe("Worker vs Main Thread Performance Comparison", () => {
           workerTime,
           mainSuccess,
           mainTime,
-          issue: !workerSuccess && mainSuccess ? "WORKER_ONLY_FAILURE" : null
+          issue: !workerSuccess && mainSuccess ? "WORKER_ONLY_FAILURE" : null,
         });
       }
 
       // Identify problematic patterns
-      const workerOnlyFailures = results.filter(r => r.issue === "WORKER_ONLY_FAILURE");
+      const workerOnlyFailures = results.filter((r) => r.issue === "WORKER_ONLY_FAILURE");
       expect(workerOnlyFailures.length).toBeGreaterThan(0);
 
       console.table(results);
@@ -397,10 +391,10 @@ describe("Worker vs Main Thread Performance Comparison", () => {
       const remoteVideo = "https://cdn.example.com/remote-video.mp4";
 
       await coordinator.initialize();
-      const timingPromise = new Promise(resolve => {
+      const timingPromise = new Promise((resolve) => {
         // Capture timing from worker
         const originalPostMessage = Worker.prototype.postMessage;
-        Worker.prototype.postMessage = function(data) {
+        Worker.prototype.postMessage = function (data) {
           if (data.timing) {
             resolve(data.timing);
           }
@@ -434,12 +428,14 @@ describe("Worker vs Main Thread Performance Comparison", () => {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Performance comparison data generated for each test run
 - [x] Bottleneck correctly identified for different video types
 - [x] Worker-only failures properly detected
 - [x] Timing ratios calculated and validated
 
 #### Manual Verification:
+
 - [ ] Review performance comparison tables
 - [ ] Confirm bottlenecks match production observations
 - [ ] Verify parity gaps identified correctly
@@ -449,11 +445,13 @@ describe("Worker vs Main Thread Performance Comparison", () => {
 ## Phase 3: Integration Tests with Real Network Conditions
 
 ### Overview
+
 Create integration tests that simulate real-world network conditions to reproduce timeout scenarios.
 
 ### Changes Required:
 
 #### 1. Network Simulation Tests
+
 **File**: `src/lib/videos/__tests__/video-loading-network.test.ts` (new file)
 **Changes**: Tests with network throttling
 
@@ -471,18 +469,18 @@ describe("Video Loading Network Diagnostics", () => {
   describe("Network Condition Simulation", () => {
     it("should handle slow 3G conditions", async () => {
       // Simulate slow 3G: 400kbps download
-      const slowFetch = simulateSlowNetwork(400 * 1024 / 8); // bytes/sec
+      const slowFetch = simulateSlowNetwork((400 * 1024) / 8); // bytes/sec
 
       await coordinator.initialize();
 
       const videoSize = 10 * 1024 * 1024; // 10MB video
-      const expectedTime = (videoSize / (400 * 1024 / 8)) * 1000; // ms
+      const expectedTime = (videoSize / ((400 * 1024) / 8)) * 1000; // ms
 
       const start = Date.now();
       const result = await coordinator.loadVideoTexture(
         "https://example.com/10mb-video.mp4",
         "slow-3g-test",
-        {}
+        {},
       );
       const actualTime = Date.now() - start;
 
@@ -497,16 +495,16 @@ describe("Video Loading Network Diagnostics", () => {
 
     it("should measure bandwidth requirements for worker success", async () => {
       const testCases = [
-        { size: 1, bandwidth: 100 },   // 1MB @ 100kbps
-        { size: 5, bandwidth: 500 },   // 5MB @ 500kbps
-        { size: 10, bandwidth: 1000 },  // 10MB @ 1Mbps
-        { size: 50, bandwidth: 5000 },  // 50MB @ 5Mbps
+        { size: 1, bandwidth: 100 }, // 1MB @ 100kbps
+        { size: 5, bandwidth: 500 }, // 5MB @ 500kbps
+        { size: 10, bandwidth: 1000 }, // 10MB @ 1Mbps
+        { size: 50, bandwidth: 5000 }, // 50MB @ 5Mbps
       ];
 
       const results = [];
 
       for (const { size, bandwidth } of testCases) {
-        const downloadTime = (size * 1024 * 1024) / (bandwidth * 1024 / 8) * 1000;
+        const downloadTime = ((size * 1024 * 1024) / ((bandwidth * 1024) / 8)) * 1000;
         const willTimeout = downloadTime > 14000; // Leave 1s for other operations
 
         results.push({
@@ -514,7 +512,7 @@ describe("Video Loading Network Diagnostics", () => {
           bandwidth: `${bandwidth}kbps`,
           downloadTime: `${(downloadTime / 1000).toFixed(1)}s`,
           willTimeout,
-          minBandwidth: willTimeout ? `>${bandwidth}kbps` : `>=${bandwidth}kbps`
+          minBandwidth: willTimeout ? `>${bandwidth}kbps` : `>=${bandwidth}kbps`,
         });
       }
 
@@ -525,7 +523,7 @@ describe("Video Loading Network Diagnostics", () => {
         "1MB": "70kbps",
         "5MB": "350kbps",
         "10MB": "700kbps",
-        "50MB": "3500kbps"
+        "50MB": "3500kbps",
       };
 
       expect(requirements["10MB"]).toBe("700kbps");
@@ -535,7 +533,7 @@ describe("Video Loading Network Diagnostics", () => {
       const cdnTests = [
         { url: "https://fast-cdn.example.com/video.mp4", latency: 50 },
         { url: "https://slow-cdn.example.com/video.mp4", latency: 2000 },
-        { url: "https://distant-cdn.example.com/video.mp4", latency: 5000 }
+        { url: "https://distant-cdn.example.com/video.mp4", latency: 5000 },
       ];
 
       for (const { url, latency } of cdnTests) {
@@ -567,12 +565,14 @@ describe("Video Loading Network Diagnostics", () => {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Network throttling correctly simulated
 - [x] Bandwidth requirements calculated accurately
 - [x] CDN latency impact measured
 - [x] Timeout thresholds validated for different conditions
 
 #### Manual Verification:
+
 - [ ] Test with actual throttled network
 - [ ] Verify calculations match real-world behavior
 - [ ] Confirm minimum bandwidth requirements are realistic
@@ -582,11 +582,13 @@ describe("Video Loading Network Diagnostics", () => {
 ## Phase 4: End-to-End Diagnostic Tests
 
 ### Overview
+
 Create E2E tests that capture real browser behavior and diagnostic data.
 
 ### Changes Required:
 
 #### 1. E2E Diagnostic Test Suite
+
 **File**: `tests/e2e/video-loading-diagnostics.spec.ts` (new file)
 **Changes**: Browser-based diagnostic tests
 
@@ -603,13 +605,15 @@ test.describe("Video Loading Diagnostics E2E", () => {
 
     // Capture console logs
     page.on("console", (msg) => {
-      if (msg.text().includes("[Worker]") ||
-          msg.text().includes("[Coordinator]") ||
-          msg.text().includes("[Component]")) {
+      if (
+        msg.text().includes("[Worker]") ||
+        msg.text().includes("[Coordinator]") ||
+        msg.text().includes("[Component]")
+      ) {
         consoleLogs.push({
           text: msg.text(),
           type: msg.type(),
-          time: Date.now()
+          time: Date.now(),
         });
       }
     });
@@ -621,7 +625,7 @@ test.describe("Video Loading Diagnostics E2E", () => {
           url: response.url(),
           status: response.status(),
           timing: response.timing(),
-          size: response.headers()["content-length"]
+          size: response.headers()["content-length"],
         });
       }
     });
@@ -641,17 +645,17 @@ test.describe("Video Loading Diagnostics E2E", () => {
 
     // Wait for load or timeout
     await page.waitForSelector('[data-testid="video-loaded"], [data-testid="video-error"]', {
-      timeout: 60000
+      timeout: 60000,
     });
 
     // Analyze captured logs
-    const workerLogs = consoleLogs.filter(log => log.text.includes("[Worker]"));
-    const coordinatorLogs = consoleLogs.filter(log => log.text.includes("[Coordinator]"));
+    const workerLogs = consoleLogs.filter((log) => log.text.includes("[Worker]"));
+    const coordinatorLogs = consoleLogs.filter((log) => log.text.includes("[Coordinator]"));
 
     // Extract timing data
-    const metadataLog = workerLogs.find(log => log.text.includes("Metadata fetched"));
-    const fetchLog = workerLogs.find(log => log.text.includes("Video response received"));
-    const blobLog = workerLogs.find(log => log.text.includes("Blob created"));
+    const metadataLog = workerLogs.find((log) => log.text.includes("Metadata fetched"));
+    const fetchLog = workerLogs.find((log) => log.text.includes("Video response received"));
+    const blobLog = workerLogs.find((log) => log.text.includes("Blob created"));
 
     // Generate diagnostic report
     const diagnosticReport = {
@@ -661,9 +665,9 @@ test.describe("Video Loading Diagnostics E2E", () => {
       fetchTime: extractTiming(fetchLog),
       blobTime: extractTiming(blobLog),
       networkRequests: networkTimings.length,
-      loadingMethod: coordinatorLogs.find(log =>
-        log.text.includes("loaded using") || log.text.includes("loaded on")
-      )?.text
+      loadingMethod: coordinatorLogs.find(
+        (log) => log.text.includes("loaded using") || log.text.includes("loaded on"),
+      )?.text,
     };
 
     console.log("Diagnostic Report:", diagnosticReport);
@@ -681,7 +685,7 @@ test.describe("Video Loading Diagnostics E2E", () => {
 
     // Test with worker
     await page.click('[data-testid="add-video-block"]');
-    await page.fill('[data-testid="video-url-input"]', 'https://example.com/test-video.mp4');
+    await page.fill('[data-testid="video-url-input"]', "https://example.com/test-video.mp4");
 
     const workerStart = Date.now();
     await page.click('[data-testid="load-video-button"]');
@@ -691,12 +695,12 @@ test.describe("Video Loading Diagnostics E2E", () => {
     // Clear and test without worker (if toggle available)
     await page.evaluate(() => {
       // Force main thread path for comparison
-      window.localStorage.setItem('forceMainThreadVideo', 'true');
+      window.localStorage.setItem("forceMainThreadVideo", "true");
     });
 
     await page.reload();
     await page.click('[data-testid="add-video-block"]');
-    await page.fill('[data-testid="video-url-input"]', 'https://example.com/test-video.mp4');
+    await page.fill('[data-testid="video-url-input"]', "https://example.com/test-video.mp4");
 
     const mainStart = Date.now();
     await page.click('[data-testid="load-video-button"]');
@@ -708,7 +712,7 @@ test.describe("Video Loading Diagnostics E2E", () => {
       worker: workerTime,
       main: mainTime,
       difference: workerTime - mainTime,
-      workerSlower: workerTime > mainTime
+      workerSlower: workerTime > mainTime,
     });
 
     // Generate alert if worker is significantly slower
@@ -729,23 +733,23 @@ test.describe("Video Loading Diagnostics E2E", () => {
       await page.click('[data-testid="add-video-block"]');
       const start = Date.now();
 
-      await page.fill('[data-testid="video-url-input"]',
-        `https://example.com/test-video-${i}.mp4`);
+      await page.fill('[data-testid="video-url-input"]', `https://example.com/test-video-${i}.mp4`);
       await page.click('[data-testid="load-video-button"]');
 
       await page.waitForSelector(`[data-testid="video-loaded-${i}"]`, {
-        timeout: 30000
+        timeout: 30000,
       });
 
       const loadTime = Date.now() - start;
-      const blobLog = consoleLogs.find(log => log.text.includes("Blob created"));
+      const blobLog = consoleLogs.find((log) => log.text.includes("Blob created"));
 
       loadTimes.push({
         index: i,
         loadTime,
         blobTime: extractTiming(blobLog),
-        method: consoleLogs.find(log => log.text.includes("loaded"))?.text.includes("Worker")
-          ? "worker" : "main"
+        method: consoleLogs.find((log) => log.text.includes("loaded"))?.text.includes("Worker")
+          ? "worker"
+          : "main",
       });
     }
 
@@ -759,7 +763,7 @@ test.describe("Video Loading Diagnostics E2E", () => {
       console.warn("Performance degradation detected:", {
         firstAvg: avgFirstTwo,
         lastAvg: avgLastTwo,
-        degradation: ((avgLastTwo / avgFirstTwo - 1) * 100).toFixed(1) + "%"
+        degradation: ((avgLastTwo / avgFirstTwo - 1) * 100).toFixed(1) + "%",
       });
     }
   });
@@ -775,12 +779,14 @@ function extractTiming(log: any): number {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] E2E tests capture all diagnostic logs: `pnpm test:e2e -- video-loading-diagnostics`
 - [x] Timing data extracted correctly from logs
 - [x] Performance comparison data generated
 - [x] Memory pressure patterns detected
 
 #### Manual Verification:
+
 - [ ] Review diagnostic reports from test runs
 - [ ] Confirm timing matches manual testing
 - [ ] Verify E2E findings align with unit test results
@@ -790,11 +796,13 @@ function extractTiming(log: any): number {
 ## Phase 5: Diagnostic Reporting and Analysis
 
 ### Overview
+
 Create automated diagnostic reports that synthesize test results to identify root causes.
 
 ### Changes Required:
 
 #### 1. Diagnostic Report Generator
+
 **File**: `src/lib/videos/__tests__/diagnostic-report.ts` (new file)
 **Changes**: Automated analysis and reporting
 
@@ -830,7 +838,7 @@ export class VideoDiagnosticReporter {
       summary: this.generateSummary(),
       bottlenecks: this.identifyBottlenecks(),
       recommendations: this.generateRecommendations(),
-      detailedResults: this.data
+      detailedResults: this.data,
     };
 
     // Write report
@@ -850,24 +858,20 @@ export class VideoDiagnosticReporter {
   }
 
   private generateSummary() {
-    const workerSuccesses = this.data.filter(d =>
-      d.loadingMethod === "worker" && d.success
-    );
-    const workerFailures = this.data.filter(d =>
-      d.loadingMethod === "worker" && !d.success
-    );
-    const mainThreadLoads = this.data.filter(d =>
-      d.loadingMethod === "main-thread"
-    );
+    const workerSuccesses = this.data.filter((d) => d.loadingMethod === "worker" && d.success);
+    const workerFailures = this.data.filter((d) => d.loadingMethod === "worker" && !d.success);
+    const mainThreadLoads = this.data.filter((d) => d.loadingMethod === "main-thread");
 
     return {
       totalTests: this.data.length,
-      workerSuccessRate: (workerSuccesses.length /
-        (workerSuccesses.length + workerFailures.length) * 100).toFixed(1) + "%",
-      avgWorkerTime: this.average(workerSuccesses.map(d => d.timing.total)),
-      avgMainTime: this.average(mainThreadLoads.map(d => d.timing.total)),
+      workerSuccessRate:
+        ((workerSuccesses.length / (workerSuccesses.length + workerFailures.length)) * 100).toFixed(
+          1,
+        ) + "%",
+      avgWorkerTime: this.average(workerSuccesses.map((d) => d.timing.total)),
+      avgMainTime: this.average(mainThreadLoads.map((d) => d.timing.total)),
       timeoutsCount: workerFailures.length,
-      fallbacksCount: mainThreadLoads.length
+      fallbacksCount: mainThreadLoads.length,
     };
   }
 
@@ -876,9 +880,7 @@ export class VideoDiagnosticReporter {
     const bottlenecks = [];
 
     for (const stage of stages) {
-      const times = this.data
-        .filter(d => d.timing[stage])
-        .map(d => d.timing[stage]);
+      const times = this.data.filter((d) => d.timing[stage]).map((d) => d.timing[stage]);
 
       if (times.length > 0) {
         const avg = this.average(times);
@@ -889,7 +891,7 @@ export class VideoDiagnosticReporter {
           avgTime: avg,
           maxTime: max,
           isBottleneck: avg > 3000 || max > 10000,
-          samples: times.length
+          samples: times.length,
         });
       }
     }
@@ -902,44 +904,44 @@ export class VideoDiagnosticReporter {
     const bottlenecks = this.identifyBottlenecks();
 
     // Check fetch bottleneck
-    const fetchBottleneck = bottlenecks.find(b => b.stage === "fetch");
+    const fetchBottleneck = bottlenecks.find((b) => b.stage === "fetch");
     if (fetchBottleneck?.isBottleneck) {
       recommendations.push(
         `CRITICAL: Video fetch averaging ${fetchBottleneck.avgTime}ms. ` +
-        `Consider: CDN optimization, compression, or chunked loading.`
+          `Consider: CDN optimization, compression, or chunked loading.`,
       );
     }
 
     // Check blob bottleneck
-    const blobBottleneck = bottlenecks.find(b => b.stage === "blob");
+    const blobBottleneck = bottlenecks.find((b) => b.stage === "blob");
     if (blobBottleneck?.isBottleneck) {
       recommendations.push(
         `CRITICAL: Blob creation averaging ${blobBottleneck.avgTime}ms. ` +
-        `Consider: Streaming API instead of blob conversion, or reduce video size.`
+          `Consider: Streaming API instead of blob conversion, or reduce video size.`,
       );
     }
 
     // Check timeout rate
-    const timeoutRate = this.data.filter(d => !d.success).length / this.data.length;
+    const timeoutRate = this.data.filter((d) => !d.success).length / this.data.length;
     if (timeoutRate > 0.2) {
       recommendations.push(
         `WARNING: ${(timeoutRate * 100).toFixed(0)}% timeout rate. ` +
-        `Consider: Increasing timeout, optimizing worker, or streaming approach.`
+          `Consider: Increasing timeout, optimizing worker, or streaming approach.`,
       );
     }
 
     // Check if main thread is faster
     const avgWorker = this.average(
-      this.data.filter(d => d.loadingMethod === "worker").map(d => d.timing.total)
+      this.data.filter((d) => d.loadingMethod === "worker").map((d) => d.timing.total),
     );
     const avgMain = this.average(
-      this.data.filter(d => d.loadingMethod === "main-thread").map(d => d.timing.total)
+      this.data.filter((d) => d.loadingMethod === "main-thread").map((d) => d.timing.total),
     );
 
     if (avgMain < avgWorker * 0.8) {
       recommendations.push(
-        `INFO: Main thread is ${((1 - avgMain/avgWorker) * 100).toFixed(0)}% faster. ` +
-        `Worker overhead may not be justified for current video sizes.`
+        `INFO: Main thread is ${((1 - avgMain / avgWorker) * 100).toFixed(0)}% faster. ` +
+          `Worker overhead may not be justified for current video sizes.`,
       );
     }
 
@@ -966,12 +968,14 @@ export function runDiagnosticSuite() {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Diagnostic report generated after test run
 - [x] Bottlenecks correctly identified
 - [x] Recommendations are actionable
 - [x] Report includes all test data
 
 #### Manual Verification:
+
 - [ ] Review diagnostic report for insights
 - [ ] Confirm recommendations address actual issues
 - [ ] Validate bottleneck identification accuracy
@@ -981,24 +985,28 @@ export function runDiagnosticSuite() {
 ## Testing Strategy
 
 ### Unit Tests:
+
 - Isolate each stage of video loading pipeline
 - Measure timing for each stage independently
 - Simulate various failure modes
 - Test with mocked network conditions
 
 ### Integration Tests:
+
 - Test actual worker-coordinator communication
 - Measure real timing with test videos
 - Compare worker vs main thread performance
 - Test concurrent loading scenarios
 
 ### E2E Tests:
+
 - Capture actual browser behavior
 - Collect real diagnostic logs
 - Test with production-like videos
 - Measure end-to-end performance
 
 ### Manual Testing Steps:
+
 1. Run diagnostic test suite: `pnpm test:diagnostic`
 2. Review generated diagnostic report
 3. Test with actual problematic videos from Linear ticket

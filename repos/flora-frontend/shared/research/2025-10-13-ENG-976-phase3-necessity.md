@@ -34,11 +34,13 @@ Evaluate if Phase 3 of the guest permissions implementation plan is needed, give
 The application implements a robust server-side enforcement system that prevents guests from accessing the editor:
 
 1. **Automatic URL Routing** (`src/lib/routing/role-helpers.ts:5-12`)
+
    - The `getProjectUrl()` function returns different URLs based on user role
    - Guests get `/projects/readonly/{id}` while editors get `/projects/{id}`
    - This function is used consistently throughout the application for generating project links
 
 2. **Server-Side Route Guards**
+
    - **Editor Route** (`src/app/(with-migration)/projects/[id]/page.tsx:62-64`): Redirects non-editors to readonly view
    - **Readonly Route** (`src/app/(with-migration)/projects/readonly/[id]/page.tsx:61-66`): Redirects editors back to editor view
    - These are server-side checks that cannot be bypassed by client-side navigation
@@ -52,11 +54,13 @@ The application implements a robust server-side enforcement system that prevents
 The readonly view is a completely separate implementation from the editor view:
 
 1. **Separate Component Tree**
+
    - **Readonly**: Uses `ViewonlyWorkspace`, `ViewonlyContainer`, `ViewonlySidebar`, `ViewonlyFooter`
    - **Editor**: Uses `ProjectWorkspace`, `WebGLMultiplayerProjectWorkspaceWrapper`, `ProjectToolsSidebar`, `ParametersSidebar`
    - No shared UI components between the two views for the targeted elements
 
 2. **Phase 3 Target Components Not Present in Readonly**
+
    - ❌ **ContributorsList** - Not rendered in readonly view
    - ❌ **CreditsIndicator** - Not rendered in readonly view
    - ❌ **ProjectMenuButton** - Not rendered in readonly view
@@ -82,6 +86,7 @@ The readonly view is a completely separate implementation from the editor view:
 ### Phase 3 Implementation Analysis
 
 The Phase 3 plan targets hiding UI elements in the editor canvas:
+
 - Parameters sidebar with ContributorsList
 - Project tools sidebar with CreditsIndicator
 - Project menu with "New project" option
@@ -91,6 +96,7 @@ However, these components only exist in the editor view at `/projects/[id]`, whi
 ## Code References
 
 ### Routing and Access Control
+
 - `src/lib/routing/role-helpers.ts:5-12` - `getProjectUrl()` function for role-based routing
 - `src/lib/routing/role-helpers.ts:14-16` - `isGuestUser()` helper function
 - `src/app/(with-migration)/projects/[id]/page.tsx:62-64` - Editor route guard redirecting non-editors
@@ -98,17 +104,20 @@ However, these components only exist in the editor view at `/projects/[id]`, whi
 - `src/app/(with-migration)/new/route.ts:105-111` - New project route preventing guest creation
 
 ### Readonly View Components
+
 - `src/components/workspace/viewonly/viewonly-workspace.tsx` - Main readonly workspace
 - `src/components/workspace/viewonly/viewonly-container.tsx` - Readonly container with canvas
 - `src/components/workspace/viewonly/viewonly-sidebar.tsx` - Readonly sidebar (no Phase 3 targets)
 - `src/components/workspace/viewonly/viewonly-footer.tsx` - Readonly footer
 
 ### Editor View Components (Phase 3 Targets)
+
 - `src/components/sidebars/parametersSidebar.tsx:28-32` - ContributorsList location
 - `src/components/sidebars/workspace/projectToolsSidebar.tsx:293-303` - CreditsIndicator location
 - `src/components/sidebars/workspace/project-menu-button.tsx:83` - "New project" menu item
 
 ### Database and Role Management
+
 - `convex/currentUser/helpers.ts:29-48` - `getCurrentUserRole()` function
 - `convex/projects/queries.ts:115-127` - Project role determination in `getProject`
 - `convex/projects/queries.ts:698-710` - Project role determination in `getReadonlyProject`
@@ -116,17 +125,22 @@ However, these components only exist in the editor view at `/projects/[id]`, whi
 ## Architecture Documentation
 
 ### Role-Based Routing Pattern
+
 The application uses a consistent pattern of role-based URL generation through a single helper function (`getProjectUrl`), ensuring all project links throughout the application respect user permissions. This eliminates the need for permission checks at every link creation point.
 
 ### Dual View Architecture
+
 The system maintains two completely separate view implementations:
+
 - **Editor View**: Full React Flow canvas with editing capabilities, project management tools, and real-time collaboration
 - **Readonly View**: Simplified view-only canvas with minimal UI for browsing and cloning
 
 ### Server-Side Enforcement
+
 Access control is enforced at the server component level, not through client-side checks. This ensures security cannot be bypassed through client-side manipulation or direct URL navigation.
 
 ### Permission Hierarchy
+
 1. **Workspace Level**: User role determined by `workspaceMemberships` table
 2. **Project Level**: Can be overridden by `projectMemberships` table
 3. **Route Level**: Server components enforce access based on computed role
@@ -134,10 +148,12 @@ Access control is enforced at the server component level, not through client-sid
 ## Historical Context (from thoughts/)
 
 ### Original Plan
+
 - `thoughts/shared/plans/2025-10-13-ENG-976-guest-ui-visibility.md` - Phase 3 planned to hide UI elements in canvas view
 - Plan assumed guests could access the editor canvas and needed client-side hiding
 
 ### Current Implementation Status
+
 - Phase 1 (Dashboard Header) - Completed and verified
 - Phase 2 (Dashboard Sidebar) - Completed and verified
 - Phase 3 (Canvas UI Elements) - Not needed due to existing route separation

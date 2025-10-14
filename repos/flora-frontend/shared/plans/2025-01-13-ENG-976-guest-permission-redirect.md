@@ -7,6 +7,7 @@ Add permission checks when users visit `/projects/[id]` to redirect guest users 
 ## Current State Analysis
 
 The current implementation (PR #2025) includes:
+
 - `getProjectUrl()` helper in `src/lib/routing/role-helpers.ts` that returns the correct URL based on user role
 - Updated dashboard components to use `getProjectUrl()` for generating links
 - Existing redirect logic in `/projects/[id]/page.tsx:62-64` that redirects guests to readonly view
@@ -14,6 +15,7 @@ The current implementation (PR #2025) includes:
 However, the issue is that the redirect only happens AFTER the page loads and checks permissions server-side. We need to prevent guests from even attempting to access the editor view directly.
 
 ### Key Discoveries:
+
 - Current redirect logic is in `src/app/(with-migration)/projects/[id]/page.tsx:62-64`
 - Guest role is fetched from `api.projects.queries.getProject` which returns `currentProjectRole`
 - The readonly page at `src/app/(with-migration)/projects/readonly/[id]/page.tsx:60-66` correctly redirects non-guests back to editor view
@@ -24,6 +26,7 @@ However, the issue is that the redirect only happens AFTER the page loads and ch
 When a guest user directly accesses `/projects/[id]` (via bookmark, direct URL, or any other means), they should be immediately redirected to `/projects/readonly/[id]` before any project data loads. The redirect should happen as early as possible in the request lifecycle.
 
 ### Key Requirements:
+
 - Guest users accessing `/projects/[id]` redirect to `/projects/readonly/[id]`
 - Editor/Admin users accessing `/projects/readonly/[id]` redirect to `/projects/[id]` (already implemented)
 - Redirect happens before expensive project data fetching
@@ -44,11 +47,13 @@ Since the current implementation already has the redirect logic in place at line
 ## Phase 1: Optimize Permission Check Order
 
 ### Overview
+
 Reorganize the project page data fetching to check user role first, then fetch additional data only if the user has appropriate access.
 
 ### Changes Required:
 
 #### 1. Project Page Permission Check
+
 **File**: `src/app/(with-migration)/projects/[id]/page.tsx`
 **Changes**: Refactor data fetching to check permissions before fetching all project data
 
@@ -132,11 +137,13 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] TypeScript compilation passes: `pnpm typecheck`
 - [x] Build succeeds: `pnpm build`
 - [x] No linting errors: `pnpm lint`
 
 #### Manual Verification:
+
 - [ ] Guest user accessing `/projects/[id]` redirects to `/projects/readonly/[id]`
 - [ ] Editor/Admin users can access `/projects/[id]` normally
 - [ ] Project page loads faster for guest redirects (fewer queries executed)
@@ -149,11 +156,13 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
 ## Phase 2: Add Early Return Optimization for Readonly Page
 
 ### Overview
+
 Ensure the readonly page also checks permissions early to redirect editors/admins before fetching unnecessary data.
 
 ### Changes Required:
 
 #### 1. Readonly Page Optimization
+
 **File**: `src/app/(with-migration)/projects/readonly/[id]/page.tsx`
 **Changes**: Check role before fetching additional readonly-specific data
 
@@ -162,10 +171,12 @@ The current implementation already checks and redirects appropriately at lines 6
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] TypeScript compilation passes: `pnpm typecheck`
 - [ ] Build succeeds: `pnpm build`
 
 #### Manual Verification:
+
 - [ ] Editor/Admin accessing `/projects/readonly/[id]` redirects to `/projects/[id]`
 - [ ] Guest users can access `/projects/readonly/[id]` normally
 - [ ] Readonly page loads correctly with all view-only features
@@ -175,15 +186,19 @@ The current implementation already checks and redirects appropriately at lines 6
 ## Testing Strategy
 
 ### Unit Tests:
+
 Since these are Next.js page components with server-side logic, unit testing is limited. Focus on integration testing.
 
 ### Integration Tests:
+
 1. Test guest user redirect flow:
+
    - Create guest user session
    - Navigate to `/projects/[valid-id]`
    - Verify redirect to `/projects/readonly/[valid-id]`
 
 2. Test editor user access:
+
    - Create editor user session
    - Navigate to `/projects/[valid-id]`
    - Verify no redirect occurs
@@ -196,6 +211,7 @@ Since these are Next.js page components with server-side logic, unit testing is 
    - Verify project loads correctly
 
 ### Manual Testing Steps:
+
 1. Log in as a guest user (or use a test account with guest role)
 2. Copy a direct project URL `/projects/[id]`
 3. Paste URL in a new tab and navigate
@@ -209,6 +225,7 @@ Since these are Next.js page components with server-side logic, unit testing is 
 ## Performance Considerations
 
 The main optimization is reducing the number of parallel queries for guest users. Instead of fetching all project data before checking permissions, we:
+
 1. Fetch only the project and role first
 2. Check if redirect is needed
 3. Only fetch additional data if user has access

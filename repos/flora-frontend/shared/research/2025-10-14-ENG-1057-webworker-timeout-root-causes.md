@@ -127,17 +127,20 @@ The main thread loading path ([video-texture-loader.ts:559-658](src/lib/videos/v
 Recent commits added comprehensive logging at multiple levels:
 
 **Worker Level** ([video-processor.worker.js](public/workers/video-processor.worker.js)):
+
 - Logs timing for each stage (metadata, fetch, blob)
 - Reports timing breakdown in success message
 - All logging gated behind development environment checks
 
 **Coordinator Level** ([video-texture-loader.ts](src/lib/videos/video-texture-loader.ts)):
+
 - Logs callback registration with timestamp
 - Measures and logs worker response time
 - Warns when response time exceeds 10 seconds
 - Tracks which loading method (worker vs main thread) actually succeeded
 
 **Component Level** ([video-material.tsx](src/components/r3f/blocks/video/video-material.tsx)):
+
 - Records total component-level load time
 - Warns for loads exceeding 10 seconds
 - Uses accurate loading method from coordinator
@@ -161,18 +164,21 @@ The diagnostic plan ([2025-01-13-ENG-1057-video-webworker-diagnostics.md](though
 ## Code References
 
 ### Core Implementation
+
 - `public/workers/video-processor.worker.js:77-169` - Worker video processing pipeline
 - `src/lib/videos/video-texture-loader.ts:385-557` - Worker load coordination
 - `src/lib/videos/video-texture-loader.ts:559-658` - Main thread fallback
 - `src/lib/videos/video-texture-loader.ts:397-410` - 15-second timeout setup
 
 ### Test Files
+
 - `src/lib/videos/__tests__/video-texture-loader-diagnostics.test.ts` - Timing diagnostics
 - `src/lib/videos/__tests__/video-loading-network.test.ts` - Network conditions
 - `src/lib/videos/__tests__/video-loading-performance.test.ts` - Performance comparison
 - `scripts/test-video-loading.mjs` - Direct browser testing script
 
 ### Critical Bottlenecks
+
 - `public/workers/video-processor.worker.js:112` - Blocking GET request
 - `public/workers/video-processor.worker.js:127` - Blocking blob creation
 - `public/workers/video-processor.worker.js:87` - Blocking HEAD request
@@ -207,11 +213,13 @@ The diagnostic plan ([2025-01-13-ENG-1057-video-webworker-diagnostics.md](though
 ## Historical Context (from thoughts/)
 
 The ENG-1057 ticket ([thoughts/shared/tickets/ENG-1057.md](thoughts/shared/tickets/ENG-1057.md)) describes:
+
 - Video slow loading issues
 - Video load failures on many canvases
 - Need for diagnostic tooling
 
 The implementation plan ([thoughts/shared/plans/2025-01-13-ENG-1057-video-webworker-diagnostics.md](thoughts/shared/plans/2025-01-13-ENG-1057-video-webworker-diagnostics.md)) outlined five phases:
+
 1. Fix misleading status reporting (completed)
 2. Add diagnostic logging (completed)
 3. Implement unit tests (completed)
