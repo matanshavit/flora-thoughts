@@ -147,9 +147,9 @@ export const removeUserFromWorkspace = authenticatedMutation({
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Code compiles without errors: `pnpm typecheck`
-- [ ] Convex deployment succeeds: `pnpm convex deploy`
-- [ ] No linting errors: `pnpm lint`
+- [x] Code compiles without errors: `pnpm typecheck`
+- [x] Convex deployment succeeds: `pnpm convex deploy`
+- [x] No linting errors: `pnpm lint`
 
 #### Manual Verification:
 - [ ] Create an email invitation for a user to a workspace
