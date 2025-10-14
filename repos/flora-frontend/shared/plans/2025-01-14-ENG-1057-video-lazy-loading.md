@@ -233,6 +233,7 @@ onPointerEnter={(e) => {
 
 - [x] Type checking passes: `pnpm typecheck`
 - [x] Build succeeds: `pnpm build`
+- [x] Unit tests pass: `pnpm test:unit`
 
 #### Manual Verification:
 
@@ -285,6 +286,7 @@ async loadVideoTexture(
 
 - [x] Type checking passes: `pnpm typecheck`
 - [x] Build succeeds: `pnpm build`
+- [x] Unit tests pass: `pnpm test:unit`
 
 #### Manual Verification:
 
