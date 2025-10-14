@@ -264,7 +264,9 @@ Modify the bottom controls section (lines 187-222):
 
 ---
 
-## Phase 3: Canvas UI Elements
+## [WILL NOT DO] Phase 3: Canvas UI Elements
+
+Note, this phase is not needed because guest users should only ever see the read-only canvas, not the canvas editor.
 
 ### Overview
 
