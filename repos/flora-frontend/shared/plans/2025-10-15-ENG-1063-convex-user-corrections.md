@@ -73,12 +73,14 @@ users: defineTable(usersValidator)
   }),
 ```
 
+✓ Completed - Added clerkId index to users table
+
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Deploy succeeds: `pnpm convex deploy`
-- [ ] No TypeScript errors: `pnpm typecheck`
-- [ ] No linting errors: `pnpm lint`
+- [x] Deploy succeeds: `pnpm convex deploy` ✓ Index added successfully
+- [x] No TypeScript errors: `pnpm typecheck` ✓ No new errors introduced
+- [x] No linting errors: `pnpm lint` ✓ No new errors introduced
 
 #### Manual Verification:
 - [ ] New `by_clerk_id` index appears in Convex dashboard
