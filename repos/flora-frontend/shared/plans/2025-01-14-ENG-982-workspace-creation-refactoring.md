@@ -7,10 +7,12 @@ Consolidate duplicate workspace creation logic from two locations into a shared 
 ## Current State Analysis
 
 Currently, workspace creation with customer and membership setup is duplicated in:
+
 - **User creation flow** (`convex/users/helpers.ts:127-152`): Creates workspace for new users with 500 default credits
 - **Recovery flow** (`convex/currentUser/mutations.ts:118-147`): Creates recovery workspace with 0 credits when user is removed from last workspace
 
 Both locations follow the same pattern but with slight variations:
+
 1. Create workspace with owner
 2. Create customer with credits
 3. Create workspace membership as admin
@@ -28,6 +30,7 @@ Both locations follow the same pattern but with slight variations:
 A single, reusable helper function that encapsulates the complete workspace setup pattern, eliminating duplication and ensuring consistency across all workspace creation scenarios.
 
 ### Verification:
+
 - Both user creation and recovery flows use the same shared helper
 - No duplicate code for workspace-customer-membership creation
 - Consistent use of helper functions (no direct inserts)
@@ -155,6 +158,7 @@ import { createWorkspace, createWorkspaceWithCustomerAndMembership } from "../wo
 **Changes**: Replace lines 128-152 with the new helper
 
 Replace this:
+
 ```typescript
 // Create new workspace with the user as owner
 targetWorkspaceId = await createWorkspace(ctx, {
@@ -183,6 +187,7 @@ const membershipId = await createWorkspaceMembership(ctx, {
 ```
 
 With this:
+
 ```typescript
 // Create new workspace with customer and membership
 const { workspaceId, membershipId } = await createWorkspaceWithCustomerAndMembership(ctx, {
@@ -201,6 +206,7 @@ targetWorkspaceId = workspaceId;
 **Changes**: Remove imports that are no longer directly used
 
 Remove:
+
 ```typescript
 import { createCustomer } from "../customers/helpers";
 import { createWorkspaceMembership } from "../workspaceMemberships/helpers";
@@ -246,6 +252,7 @@ import { createWorkspaceWithCustomerAndMembership } from "../workspaces/helpers"
 **Changes**: Replace lines 119-146 with the new helper
 
 Replace this:
+
 ```typescript
 // Edge case: User has no workspaces (shouldn't happen in normal flow)
 // Create a recovery workspace using existing helper
@@ -278,6 +285,7 @@ await ctx.db.patch(removedUserId, {
 ```
 
 With this:
+
 ```typescript
 // Edge case: User has no workspaces (shouldn't happen in normal flow)
 // Create a recovery workspace
@@ -297,6 +305,7 @@ const { workspaceId } = await createWorkspaceWithCustomerAndMembership(ctx, {
 **Changes**: Remove imports that are no longer directly used
 
 Remove:
+
 ```typescript
 import { createCustomer } from "../customers/helpers";
 import { createWorkspaceMembership } from "../workspaceMemberships/helpers";

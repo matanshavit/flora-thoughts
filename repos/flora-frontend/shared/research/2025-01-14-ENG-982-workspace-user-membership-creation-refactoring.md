@@ -22,6 +22,7 @@ last_updated_by: Claude
 ## Research Question
 
 ENG-982: Investigate refactoring the creation of workspace, user, and membership from two locations into a shared TypeScript file that both can use. Specifically examining:
+
 - `convex/users/helpers.ts` lines 127-152
 - `convex/currentUser/mutations.ts` lines 118-147
 
@@ -34,6 +35,7 @@ The codebase currently has two locations where workspaces are created alongside 
 2. **Recovery Flow** (`convex/currentUser/mutations.ts:118-147`): Creates recovery workspace when user is removed from their last workspace. Allocates 0 credits (since it's a recovery scenario).
 
 Both locations follow the same pattern:
+
 1. Create workspace with owner
 2. Create customer with credits
 3. Create workspace membership as admin
@@ -46,6 +48,7 @@ The codebase already has established patterns for shared helper functions in `co
 ### Current Implementation Locations
 
 #### Location 1: User Creation Flow
+
 **File**: `convex/users/helpers.ts:127-152`
 
 ```typescript
@@ -77,6 +80,7 @@ const membershipId = await createWorkspaceMembership(ctx, {
 This creates a workspace for new users who don't join an existing enterprise workspace, with 500 default credits.
 
 #### Location 2: Recovery Workspace Creation
+
 **File**: `convex/currentUser/mutations.ts:118-147`
 
 ```typescript
@@ -114,6 +118,7 @@ This creates a recovery workspace when a user has no remaining workspaces, with 
 The codebase already provides atomic helper functions that can be composed:
 
 #### createWorkspace Helper
+
 **File**: `convex/workspaces/helpers.ts:4-23`
 
 - Creates workspace with name, owner, and editor seats
@@ -121,6 +126,7 @@ The codebase already provides atomic helper functions that can be composed:
 - Used by user creation flow
 
 #### createCustomer Helper
+
 **File**: `convex/customers/helpers.ts:5-19`
 
 - Creates customer record for a workspace
@@ -129,6 +135,7 @@ The codebase already provides atomic helper functions that can be composed:
 - Used by both locations
 
 #### createWorkspaceMembership Helper
+
 **File**: `convex/workspaceMemberships/helpers.ts:9-31`
 
 - Creates membership linking user to workspace
@@ -141,6 +148,7 @@ The codebase already provides atomic helper functions that can be composed:
 #### Helper Function Organization
 
 The convex directory follows a domain-based organization:
+
 ```
 convex/
   ├── [domain]/
@@ -230,14 +238,17 @@ Each workspace creation follows this pattern:
 The two target locations differ in:
 
 1. **Workspace Creation Method**:
+
    - User flow: Uses `createWorkspace()` helper
    - Recovery flow: Direct `ctx.db.insert()`
 
 2. **Credit Allocation**:
+
    - User flow: 500 credits (initial signup bonus)
    - Recovery flow: 0 credits (recovery scenario)
 
 3. **Workspace Naming**:
+
    - User flow: `"${firstName} ${lastName}'s workspace"`
    - Recovery flow: `"${firstName || email.split("@")[0]}'s Workspace"`
 
