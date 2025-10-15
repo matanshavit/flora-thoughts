@@ -77,8 +77,8 @@ useEffect(() => {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Build completes successfully: `pnpm build`
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Build completes successfully: `pnpm build`
 
 #### Manual Verification:
 - [ ] Join-workspace invitation links work without showing error page
