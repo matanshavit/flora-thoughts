@@ -128,10 +128,10 @@ export async function _createUser(
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] TypeScript compilation passes: `pnpm typecheck`
-- [ ] Linting passes: `pnpm lint`
-- [ ] Build succeeds: `pnpm build`
-- [ ] Convex deployment succeeds: `pnpm convex deploy`
+- [x] TypeScript compilation passes: `pnpm typecheck`
+- [x] Linting passes: `pnpm lint`
+- [x] Build succeeds: `pnpm build`
+- [x] Convex deployment succeeds: `pnpm convex deploy`
 
 #### Manual Verification:
 - [ ] Normal user registration works with unique clerkId
