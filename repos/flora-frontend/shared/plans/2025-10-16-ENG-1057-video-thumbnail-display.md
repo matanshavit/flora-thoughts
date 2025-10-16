@@ -197,10 +197,10 @@ return (
 
 #### Automated Verification:
 
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Build succeeds: `pnpm build`
-- [ ] Unit tests pass: `pnpm test:unit`
-- [ ] Linting passes: `pnpm lint`
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Build succeeds: `pnpm build`
+- [x] Unit tests pass: `pnpm test:unit`
+- [x] Linting passes: `pnpm lint`
 
 #### Manual Verification:
 
@@ -282,9 +282,9 @@ Since StaticVideoBlockR3F passes videoUrl directly to VideoBlockResultR3F, the t
 
 #### Automated Verification:
 
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] All components compile without errors
-- [ ] Build succeeds: `pnpm build`
+- [x] Type checking passes: `pnpm typecheck`
+- [x] All components compile without errors
+- [x] Build succeeds: `pnpm build`
 
 #### Manual Verification:
 
@@ -350,9 +350,9 @@ setIsLoading(false);
 
 #### Automated Verification:
 
-- [ ] No memory leaks (textures properly disposed)
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Linting passes: `pnpm lint`
+- [x] No memory leaks (textures properly disposed)
+- [x] Type checking passes: `pnpm typecheck`
+- [x] Linting passes: `pnpm lint`
 
 #### Manual Verification:
 
