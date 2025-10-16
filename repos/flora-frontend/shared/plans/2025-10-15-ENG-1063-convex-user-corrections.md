@@ -13,6 +13,7 @@ The Convex user system has two issues that need correction:
 2. **Email Update Inconsistency**: When users update their email address through the profile settings, only the `email` field is updated while `sanitizedEmail` remains unchanged. This creates a data inconsistency where the sanitized lookup key doesn't match the current email.
 
 ### Key Discoveries:
+
 - User lookups exclusively use `by_sanitized_email` index (`convex/users/helpers.ts:20-23`)
 - Email sanitization removes dots from local part for Gmail compatibility (`shared/utils/email.ts:5-9`)
 - The patch mutation directly updates fields without processing (`convex/currentUser/mutations.ts:51`)
@@ -21,12 +22,14 @@ The Convex user system has two issues that need correction:
 ## Desired End State
 
 After implementing this plan:
+
 - Users table will have an efficient `by_clerk_id` index for future authentication optimizations
 - Email updates will automatically update both `email` and `sanitizedEmail` fields
 - Data consistency will be maintained between actual and sanitized email values
 - All user lookups will continue to work without disruption
 
 ### Verification:
+
 - New index appears in Convex dashboard
 - Email updates correctly update both fields
 - No duplicate clerkId values exist in the database
@@ -43,17 +46,20 @@ After implementing this plan:
 ## Implementation Approach
 
 Two independent changes that can be deployed sequentially:
+
 1. Add the clerkId index to the schema (non-breaking addition)
 2. Modify the patch mutation to handle email updates correctly (backward compatible)
 
 ## Phase 1: Add clerkId Index
 
 ### Overview
+
 Add a new index on the `clerkId` field to enable efficient lookups by Clerk authentication ID.
 
 ### Changes Required:
 
 #### 1. Update Users Table Schema
+
 **File**: `convex/schema.ts`
 **Changes**: Add clerkId index to users table definition
 
@@ -78,11 +84,13 @@ users: defineTable(usersValidator)
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Deploy succeeds: `pnpm convex deploy` ✓ Index added successfully
 - [x] No TypeScript errors: `pnpm typecheck` ✓ No new errors introduced
 - [x] No linting errors: `pnpm lint` ✓ No new errors introduced
 
 #### Manual Verification:
+
 - [ ] New `by_clerk_id` index appears in Convex dashboard
 - [ ] Existing user authentication continues to work
 - [ ] No errors in Convex function logs
@@ -95,23 +103,26 @@ users: defineTable(usersValidator)
 ## Phase 2: Fix Email Update Sanitization
 
 ### Overview
+
 Modify the user patch mutation to automatically update `sanitizedEmail` whenever the `email` field is updated.
 
 ### Changes Required:
 
 #### 1. Import Email Sanitization Utility
+
 **File**: `convex/currentUser/mutations.ts`
 **Changes**: Add import for sanitizeEmail function
 
 ```typescript
 import { v } from "convex/values";
-import { sanitizeEmail } from "@shared/utils/email";  // Add this import
+import { sanitizeEmail } from "@shared/utils/email"; // Add this import
 import { UserRoleEnum } from "../../shared/constants";
 ```
 
 ✓ Completed - Added import for sanitizeEmail function
 
 #### 2. Update Patch Mutation Handler
+
 **File**: `convex/currentUser/mutations.ts`
 **Changes**: Modify the patch mutation to handle email sanitization
 
@@ -151,12 +162,14 @@ export const patch = authenticatedMutation({
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Deploy succeeds: `pnpm convex deploy` ✓ Successfully deployed to Convex dev
 - [x] TypeScript compilation passes: `pnpm typecheck` ✓ No new errors introduced
 - [x] Linting passes: `pnpm lint` ✓ No new errors introduced
 - [x] Build succeeds: `pnpm build` ✓ Convex changes compile correctly (build failed on unrelated DB issue)
 
 #### Manual Verification:
+
 - [ ] Email update flow works end-to-end
 - [ ] Both `email` and `sanitizedEmail` fields are updated in database
 - [ ] User can log in with new email after update
@@ -170,16 +183,19 @@ export const patch = authenticatedMutation({
 ## Testing Strategy
 
 ### Unit Tests:
+
 - Test sanitizeEmail function with various email formats
 - Test patch mutation with email updates
 - Test patch mutation with non-email updates
 
 ### Integration Tests:
+
 - Complete email update flow from UI to database
 - User authentication after email change
 - Profile updates without email changes
 
 ### Manual Testing Steps:
+
 1. Update user email through profile settings
 2. Verify both `email` and `sanitizedEmail` updated in Convex dashboard
 3. Log out and log back in with new email

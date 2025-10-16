@@ -20,13 +20,16 @@ last_updated_by: matanshavit
 **Repository**: eng-1063
 
 ## Research Question
+
 Research the Convex database for user corrections needed on the r3f canvas migration branch. Specifically:
+
 1. Add a unique constraint to the clerkId column
 2. Make it so updating email will also update sanitizedEmail, which will be sanitized like on user creation
 
 This is Convex-specific and does not affect PostgreSQL. Since this is on the r3f canvas migration branch, ReactFlow canvas functionality is not a concern.
 
 ## Summary
+
 The Convex user system currently has two key issues that need correction:
 
 1. **Missing clerkId Index**: The `clerkId` field has no index or constraint, meaning queries filtering by clerkId require full table scans. All user lookups currently use the `by_sanitized_email` index.
@@ -38,18 +41,20 @@ The Convex user system currently has two key issues that need correction:
 ### User Schema Structure
 
 The user schema is defined in `convex/modelValidators.ts:158-190` with these key fields:
+
 - `clerkId: v.string()` - Required field for Clerk authentication
 - `email: v.string()` - Required field storing the user's email
 - `sanitizedEmail: v.string()` - Required field storing normalized email for lookups
 
 The database indexes are defined in `convex/schema.ts:110-121`:
+
 ```typescript
 users: defineTable(usersValidator)
   .index("by_sanitized_email", ["sanitizedEmail"])
   .index("by_pg_id", ["pg_id"])
   .searchIndex("search_firstName", { searchField: "firstName" })
   .searchIndex("search_lastName", { searchField: "lastName" })
-  .searchIndex("search_email", { searchField: "email" })
+  .searchIndex("search_email", { searchField: "email" });
 ```
 
 **Issue 1**: There is no index on the `clerkId` field, despite it being a required identifier from the authentication system.
@@ -57,6 +62,7 @@ users: defineTable(usersValidator)
 ### Email Sanitization Implementation
 
 Email sanitization is handled by `shared/utils/email.ts:5-9`:
+
 ```typescript
 export function sanitizeEmail(email: string): string {
   const [localPart, domain] = email.split("@");
@@ -78,6 +84,7 @@ User creation properly sets both fields (`convex/users/helpers.ts:59-168`):
    - `sanitizedEmail` - Normalized version (line 90)
 
 All user lookups throughout the codebase use the `by_sanitized_email` index consistently:
+
 - `convex/users/queries.ts:21` - Current user query
 - `convex/users/helpers.ts:22` - Get current user helper
 - `convex/serverApi/users/queries.ts:19` - Server API query
@@ -89,17 +96,20 @@ All user lookups throughout the codebase use the `by_sanitized_email` index cons
 **Issue 2**: The email update flow doesn't update `sanitizedEmail` (`convex/currentUser/mutations.ts:34-56`):
 
 The `patch` mutation accepts an optional `email` field (line 15) but directly patches whatever fields are provided without processing:
+
 ```typescript
-await ctx.db.patch(currentUser._id, updateFields);  // line 51
+await ctx.db.patch(currentUser._id, updateFields); // line 51
 ```
 
 The frontend email update flow (`src/components/profile/edit-account-form.tsx:177-196`):
+
 1. Updates email in Clerk authentication system
 2. Calls `updateUser({ email: newEmail })`
 3. This calls the `patch` mutation which updates only the `email` field
 4. `sanitizedEmail` remains unchanged with the old email's sanitized value
 
 This creates inconsistency where:
+
 - `email` contains the new email address
 - `sanitizedEmail` still contains the sanitized version of the OLD email
 - User lookups still work but use outdated sanitized email
@@ -109,11 +119,13 @@ This creates inconsistency where:
 The `clerkId` is properly set during user creation:
 
 **Standard creation** (`convex/users/mutations.ts:23`):
+
 - Extracted from Clerk identity
 - Passed to `_createUser` helper
 - Stored in database
 
 **Migration creation** (`convex/migration/users.ts:83,141,174`):
+
 - Included in migration data from PostgreSQL
 - Set during insert or patch operations
 
@@ -122,6 +134,7 @@ However, there's no way to efficiently query users by `clerkId` due to the missi
 ### Migration Considerations
 
 The migration process (`convex/migration/users.ts:80-211`) properly handles both fields:
+
 - Accepts `sanitizedEmail` as input (already sanitized from PostgreSQL)
 - Checks for existing users by `pg_id` and `sanitizedEmail` indexes
 - Updates or inserts with proper field values
@@ -156,6 +169,7 @@ Based on the findings, two changes are needed:
 ## Related Research
 
 This research specifically targets Convex database corrections and does not impact:
+
 - PostgreSQL database structure
 - ReactFlow canvas functionality (since we're on r3f migration branch)
 - User authentication flow (Clerk integration remains unchanged)

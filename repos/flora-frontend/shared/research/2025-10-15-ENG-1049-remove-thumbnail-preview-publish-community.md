@@ -33,6 +33,7 @@ The thumbnail preview and selection functionality in the "Publish to Community" 
 4. **Display Components**: Multiple components display thumbnails (community cards, grids, sliders) that will continue to work with automatically selected thumbnails
 
 The removal of thumbnail selection UI will require:
+
 - Modifying the dialog to remove the thumbnail selection grid and upload functionality
 - Updating the submission logic to automatically select the first available thumbnail
 - Ensuring the backend mutations continue to receive a valid `previewUrl`
@@ -43,6 +44,7 @@ The removal of thumbnail selection UI will require:
 ### Primary Implementation File - Publishing Dialog
 
 **`src/components/projects/publish-to-community-dialog.tsx`**
+
 - **Lines 58-62**: State management for thumbnail selection
   - `uploadedImageUrl` - stores custom uploaded image URL
   - `uploading` - upload in progress flag
@@ -59,35 +61,42 @@ The removal of thumbnail selection UI will require:
 ### Backend Mutations (Convex)
 
 **`convex/communityProjects/mutations.ts`**
+
 - **Lines 13-77**: `saveCommunityProject` mutation
   - `previewUrl` is a required string parameter (line 16)
   - Updates existing projects (lines 37-49) or creates new ones (lines 50-68)
   - No server-side thumbnail generation - expects URL from client
 
 **`convex/communityProjects/queries.ts`**
+
 - **Lines 43-60**: `getCommunityProjectForProject` query fetches existing community project with `previewUrl`
 
 ### Database Schemas
 
 **Convex Schema** (`convex/modelValidators.ts:337-353`)
+
 - `previewUrl: v.optional(v.string())` field in `communityProjectsValidator`
 
 **PostgreSQL Schema** (`src/db/schema.ts:625-673`)
+
 - `previewUrl: text("preview_url")` column in `communityProjects` table
 
 ### Automatic Thumbnail Generation Logic
 
 **`convex/generationHistory/helpers.ts:130-138`**
+
 - When a generation completes with `COMPLETED` status and has an image/video URL
 - Calls `getOutputThumnailUrl()` to create thumbnail URL
 - Updates project's `pictureUrl` field (NOT the community project's `previewUrl`)
 
 **`shared/files/thumbnails.ts:7-12`**
+
 - `getOutputThumnailUrl()` helper creates ImageKit thumbnail URLs
 - Adds transformation parameters for resizing
 - For videos (.mp4), appends `/ik-thumbnail.jpg` for frame extraction
 
 **`convex/projects/helpers.ts:256-279`**
+
 - `_updateProjectPicture()` manages project thumbnails (separate from community thumbnails)
 - Priority system: manual thumbnails override automatic ones
 
@@ -96,37 +105,44 @@ The removal of thumbnail selection UI will require:
 These components will continue to display thumbnails from the `previewUrl` field:
 
 **Community Project Cards**
+
 - `src/components/community/community-project/community-project-card.tsx:80-104`
 - Displays thumbnail using ThumbnailImage component
 - 346px × 192px dimensions with hover effects
 
 **Community Project Grid**
+
 - `src/components/community/community-project/community-project-grid.tsx`
 - Grid layout for project cards
 
 **Community Project Slider**
+
 - `src/components/community/community-project/community-projects-slider.tsx`
 - Carousel view of projects
 
 **Template Blocks**
+
 - `src/components/community/template-list/template-block.tsx:15-23`
 - Uses `getOutputThumnailUrl()` helper with MEDIUM size
 
 ### Supporting UI Components
 
 **`src/components/ui/thumbnail-image.tsx`**
+
 - Reusable thumbnail component with loading states and retry logic
 - Will continue to work with automatically selected thumbnails
 
 ### State Management Analysis
 
 **Current Implementation**:
+
 - Local React state in dialog component
 - No global state management (Zustand/Redux)
 - Selection state: `useState<string | null>(null)`
 - Available thumbnails derived from ProjectStore nodes
 
 **After Removal**:
+
 - No selection state needed
 - Automatic selection of first available thumbnail
 - Continue deriving thumbnails from ProjectStore
@@ -134,15 +150,18 @@ These components will continue to display thumbnails from the `previewUrl` field
 ### Parent Components and Entry Points
 
 **`src/components/projects/share-project-dialog.tsx`**
+
 - Parent dialog that embeds PublishToCommunityDialog
 - Shows published status and sharing options
 
 **`src/components/projects/project-context-menu.tsx`**
+
 - Context menu entry point (currently commented out at lines 22, 57)
 
 ### API and Data Flow
 
 **Current Flow**:
+
 1. User opens dialog → queries existing community project
 2. Extracts thumbnails from project outputs via ProjectStore
 3. User selects thumbnail or uploads custom image
@@ -150,6 +169,7 @@ These components will continue to display thumbnails from the `previewUrl` field
 5. Mutation persists to Convex database
 
 **Simplified Flow**:
+
 1. User opens dialog → queries existing community project
 2. Extracts thumbnails from project outputs via ProjectStore
 3. Automatically selects first available thumbnail
@@ -159,25 +179,30 @@ These components will continue to display thumbnails from the `previewUrl` field
 ## Code References
 
 ### Files to Modify
+
 - `src/components/projects/publish-to-community-dialog.tsx` - Remove thumbnail selection UI and state
 
 ### Key Functions
+
 - `src/components/projects/publish-to-community-dialog.tsx:116` - Fallback logic already exists for auto-selection
 - `shared/files/thumbnails.ts:7-12` - Thumbnail URL generation helper
 - `convex/communityProjects/mutations.ts:13-77` - Backend mutation expecting `previewUrl`
 
 ### Constants
+
 - `shared/files/thumbnails.ts:1-5` - Thumbnail size constants (SMALL=96, MEDIUM=350, LARGE=500)
 
 ## Architecture Documentation
 
 ### Current Patterns
+
 - **Separation of Concerns**: Thumbnail selection is isolated in the dialog component
 - **State Management**: Local component state for UI interactions
 - **Data Derivation**: Thumbnails extracted from project outputs via ProjectStore
 - **Fallback Logic**: Already implements first-thumbnail fallback
 
 ### Integration Points
+
 - **ProjectStore**: Source of project outputs for thumbnail candidates
 - **Convex Mutations**: Backend expects `previewUrl` parameter
 - **Display Components**: Read `previewUrl` from community project data

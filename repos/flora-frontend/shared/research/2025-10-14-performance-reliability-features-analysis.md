@@ -20,6 +20,7 @@ last_updated_by: Claude
 **Repository**: flora-frontend
 
 ## Research Question
+
 Our research shows users want the application to be more performant, more reliable, and have more features that they intuitively expect. Analyze the codebase to understand current performance implementations, reliability patterns, and features compared to industry expectations.
 
 ## Executive Summary
@@ -35,6 +36,7 @@ However, gaps exist between user expectations and current implementation, partic
 #### Current Strengths
 
 **WebGL/R3F Canvas Architecture** (`src/components/workspace/multiplayer/`):
+
 - **GPU-Accelerated Rendering**: Custom WebGL shaders for nodes, edges, and effects
 - **Viewport Culling**: Only renders visible nodes with 200px margin buffer
 - **Progressive Mounting**: Originally designed to batch-load nodes in groups of 4 (currently disabled)
@@ -43,12 +45,14 @@ However, gaps exist between user expectations and current implementation, partic
 - **Off-thread Texture Loading**: Web Workers handle video/image loading without blocking main thread
 
 **React Performance Optimizations**:
+
 - **Extensive Memoization**: 152 files use `useMemo`/`useCallback`, 35 files use `React.memo`
 - **Ref-Based Updates**: Direct mutation of refs during animations avoids React re-renders
 - **Separated State Stores**: Selection, z-index, and input/output maps stored separately to prevent cascading updates
 - **Shallow Equality Hooks**: Custom selectors with LRU memoization prevent unnecessary re-renders
 
 **Build & Bundle Optimizations**:
+
 - **Turbopack**: Enabled for fast development builds with HMR
 - **React 19 Compiler**: Experimental compiler for automatic optimization
 - **Dynamic Imports**: Canvas workspace and analytics loaded client-side only
@@ -59,14 +63,17 @@ However, gaps exist between user expectations and current implementation, partic
 Based on research of ComfyUI, n8n, and ReactFlow best practices:
 
 1. **Scale Limitations**: Flora struggles with 1000+ nodes while ComfyUI handles thousands efficiently
+
    - Issue: DOM-based rendering vs canvas-based alternatives
    - Current limit: ~500-1000 nodes for acceptable performance
 
 2. **Progressive Mounting Disabled**: The system to incrementally load nodes is turned off
+
    - `DISABLE_PROGRESSIVE_MOUNT = true` in `progressive-mount-context.tsx`
    - Missing opportunity for better initial load performance
 
 3. **Edge Animation Bottlenecks**: Default `stroke-dasharray` animations cause CPU strain with hundreds of edges
+
    - Research shows custom SVG animations perform better
 
 4. **No Virtualization**: Unlike modern implementations, Flora doesn't use virtual scrolling for off-screen nodes
@@ -77,12 +84,14 @@ Based on research of ComfyUI, n8n, and ReactFlow best practices:
 #### Current Strengths
 
 **Comprehensive Error Handling**:
+
 - **Error Boundaries**: Multiple levels (global, onboarding, node-specific)
 - **Structured Error Types**: Centralized error codes and factory functions
 - **Sentry Integration**: Production error monitoring with session replay
 - **Recovery Mechanisms**: Auto-redirect, reset buttons, fallback UIs
 
 **Generation System Reliability**:
+
 - **Credit Management**: Reserve → Execute → Spend/Refund lifecycle
 - **Retry Logic**: Exponential backoff for transient failures (200 attempts max)
 - **Timeout Protection**: 10-second timeouts for pre-processing
@@ -90,6 +99,7 @@ Based on research of ComfyUI, n8n, and ReactFlow best practices:
 - **Status Tracking**: 17 distinct status codes for granular error handling
 
 **Data Persistence**:
+
 - **Database Migrations**: 105+ migration files for schema evolution
 - **Optimistic Concurrency**: Timestamp checking prevents conflicting updates
 - **Dual-Write Pattern**: Migrating from PostgreSQL to Convex with fallbacks
@@ -98,14 +108,17 @@ Based on research of ComfyUI, n8n, and ReactFlow best practices:
 #### Reliability Gaps vs Industry Expectations
 
 1. **Limited Workflow Recovery**: No equivalent to AWS Step Functions' "redrive" capability
+
    - Can't restart failed workflows from last successful step
    - Users must retry entire generation
 
 2. **Basic Retry Strategy**: Fixed 100ms backoff vs adaptive exponential backoff
+
    - Industry standard: Start at 1s, double up to max (e.g., 32s)
    - No jitter to prevent thundering herd
 
 3. **Missing Circuit Breaker**: No circuit breaker pattern for failing services
+
    - Continues attempting failing providers without backing off
    - Industry standard: Open circuit after X failures, test periodically
 
@@ -119,6 +132,7 @@ Based on research of ComfyUI, n8n, and ReactFlow best practices:
 Flora has implemented several advanced features that match or exceed competitors:
 
 **Unique Differentiators**:
+
 1. **Custom LoRA Style Training**: Train AI models with 8-30 user images
 2. **WebGL Canvas**: Hardware-accelerated rendering (rare in workflow builders)
 3. **Real-time Collaboration**: Liveblocks integration with presence awareness
@@ -127,6 +141,7 @@ Flora has implemented several advanced features that match or exceed competitors
 6. **Advanced Image Editor**: Inpainting/outpainting with AI integration
 
 **Standard Features Well-Implemented**:
+
 - Node library with 20+ AI models
 - Keyboard shortcuts and context menus
 - Undo/redo with version history
@@ -142,26 +157,31 @@ Based on analysis of ComfyUI, n8n, Node-RED, and user research:
 **Missing Core Features**:
 
 1. **Subgraph/Modular Workflows**:
+
    - Industry: Package nodes into reusable subgraphs
    - Flora: Only has basic grouping without modularity
    - Impact: Can't create reusable workflow components
 
 2. **Conditional Logic & Branching**:
+
    - Industry: If/then branches, switch nodes, loops
    - Flora: Linear flows only
    - Impact: Can't create adaptive workflows
 
 3. **Execution Modes**:
+
    - Industry: Sequential, parallel, scheduled execution
    - Flora: Only manual triggering
    - Impact: No automation capabilities
 
 4. **Template Marketplace**:
+
    - Industry: 6000+ templates (n8n), community contributions
    - Flora: Limited built-in templates
    - Impact: Longer onboarding, less discovery
 
 5. **Mini-Map Navigation**:
+
    - Industry: Standard in node editors (Blender, Figma)
    - Flora: No overview navigation
    - Impact: Difficult to navigate large workflows
@@ -174,14 +194,17 @@ Based on analysis of ComfyUI, n8n, Node-RED, and user research:
 **Advanced Features Missing**:
 
 1. **Workflow Validation System**:
+
    - Industry: Type checking, MIME validation, constraint checks
    - Flora: Basic connection validation only
 
 2. **External Integrations**:
+
    - Industry: Webhooks, APIs, database connections
    - Flora: AI models only
 
 3. **Version Control Integration**:
+
    - Industry: Git integration, branching strategies
    - Flora: Internal versioning only
 
@@ -191,25 +214,25 @@ Based on analysis of ComfyUI, n8n, Node-RED, and user research:
 
 ### 4. Performance Metrics Comparison
 
-| Metric | Flora Current | Industry Standard | Gap |
-|--------|--------------|-------------------|-----|
-| Max Nodes (Smooth) | 500-1000 | 1000-5000 | -50% to -80% |
-| Initial Load Time | Progressive (disabled) | Progressive batching | Feature disabled |
-| Edge Animations | CPU-based | GPU-based | Performance impact |
-| Memory Management | Manual cleanup | Automatic GC + pooling | Some memory leaks |
-| Render Strategy | DOM + WebGL hybrid | Pure Canvas/WebGL | Complexity overhead |
-| State Updates | 500ms throttle | 16-33ms for interactions | Feels less responsive |
+| Metric             | Flora Current          | Industry Standard        | Gap                   |
+| ------------------ | ---------------------- | ------------------------ | --------------------- |
+| Max Nodes (Smooth) | 500-1000               | 1000-5000                | -50% to -80%          |
+| Initial Load Time  | Progressive (disabled) | Progressive batching     | Feature disabled      |
+| Edge Animations    | CPU-based              | GPU-based                | Performance impact    |
+| Memory Management  | Manual cleanup         | Automatic GC + pooling   | Some memory leaks     |
+| Render Strategy    | DOM + WebGL hybrid     | Pure Canvas/WebGL        | Complexity overhead   |
+| State Updates      | 500ms throttle         | 16-33ms for interactions | Feels less responsive |
 
 ### 5. Reliability Metrics Comparison
 
-| Metric | Flora Current | Industry Standard | Gap |
-|--------|--------------|-------------------|-----|
-| Retry Strategy | Fixed 100ms | Exponential with jitter | Less sophisticated |
-| Max Retries | 200 (credit), 3-5 (others) | Configurable by type | Good |
-| Error Recovery | Manual retry | Automatic recovery | Limited automation |
-| Monitoring | Sentry + Axiom | + DataDog/Grafana | Adequate |
-| Uptime Tracking | Manual status page | Automated monitoring | Basic |
-| Rollback | Undo/redo | + Git versioning | Limited |
+| Metric          | Flora Current              | Industry Standard       | Gap                |
+| --------------- | -------------------------- | ----------------------- | ------------------ |
+| Retry Strategy  | Fixed 100ms                | Exponential with jitter | Less sophisticated |
+| Max Retries     | 200 (credit), 3-5 (others) | Configurable by type    | Good               |
+| Error Recovery  | Manual retry               | Automatic recovery      | Limited automation |
+| Monitoring      | Sentry + Axiom             | + DataDog/Grafana       | Adequate           |
+| Uptime Tracking | Manual status page         | Automated monitoring    | Basic              |
+| Rollback        | Undo/redo                  | + Git versioning        | Limited            |
 
 ## Key Insights
 
@@ -232,18 +255,21 @@ Based on analysis of ComfyUI, n8n, Node-RED, and user research:
 ### Opportunities for Improvement
 
 #### Quick Wins (Low Effort, High Impact)
+
 1. Re-enable progressive mounting (`DISABLE_PROGRESSIVE_MOUNT = false`)
 2. Implement mini-map navigation using existing camera system
 3. Add node search with existing filtering infrastructure
 4. Enable `onlyRenderVisibleElements` for large canvases
 
 #### Medium-Term Improvements
+
 1. Implement subgraph support using existing group infrastructure
 2. Add conditional branching nodes
 3. Create template marketplace with community submissions
 4. Optimize edge animations with GPU-based rendering
 
 #### Long-Term Strategic
+
 1. Consider canvas-based rendering for 1000+ node support
 2. Build workflow automation with triggers and scheduling
 3. Add external integrations (webhooks, APIs)
@@ -254,6 +280,7 @@ Based on analysis of ComfyUI, n8n, Node-RED, and user research:
 ### Performance Optimizations
 
 1. **Immediate Actions**:
+
    ```typescript
    // Re-enable progressive mounting
    const DISABLE_PROGRESSIVE_MOUNT = false; // progressive-mount-context.tsx
@@ -271,6 +298,7 @@ Based on analysis of ComfyUI, n8n, Node-RED, and user research:
 ### Reliability Enhancements
 
 1. **Implement Exponential Backoff**:
+
    ```typescript
    const backoff = Math.min(1000 * Math.pow(2, attempt), 32000);
    const jitter = Math.random() * 1000;
@@ -289,6 +317,7 @@ Based on analysis of ComfyUI, n8n, Node-RED, and user research:
    Extend existing group system to support nested workflows
 
 2. **Template System**:
+
    - Create template submission system
    - Add template categories and search
    - Enable one-click import
@@ -310,18 +339,21 @@ The codebase is well-structured to support these enhancements, with clear separa
 ## Code References
 
 ### Performance
+
 - Canvas implementation: `src/components/workspace/multiplayer/flora-canvas.tsx:63-932`
 - Progressive mounting: `src/components/workspace/multiplayer/progressive-mount-context.tsx:15-151`
 - Viewport culling: `src/components/workspace/multiplayer/viewport-culling-context.tsx:29-112`
 - WebGL workspace: `src/components/workspace/multiplayer/webgl-workspace.tsx:31-65`
 
 ### Reliability
+
 - Generation service: `src/lib/generation/generation-service.ts:135-213`
 - Error boundaries: `src/components/r3f/node-error-boundary.tsx:4-12`
 - Retry logic: `src/lib/generation/server.ts:346-377`
 - Error handling: `src/lib/helpers.ts:50-122`
 
 ### Features
+
 - LoRA training: `src/lib/assets/lora-styles/lora-generation-service.ts`
 - Collaboration: `src/lib/multiplayer/liveblocks/server.ts:12-62`
 - Batch creation: `src/hooks/use-bulk-add-nodes.tsx`
