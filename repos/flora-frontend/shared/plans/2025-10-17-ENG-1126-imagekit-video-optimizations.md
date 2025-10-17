@@ -9,6 +9,7 @@ Add ImageKit transformations to optimize video loading in the r3F canvas, preven
 The video loading system currently downloads full-size videos through a Web Worker with a 15-second timeout. Based on research, videos frequently exceed this timeout due to large file sizes. ImageKit supports video transformations via URL parameters that can reduce file sizes by 80-90%.
 
 ### Key Discoveries:
+
 - VideoTextureCoordinator (`src/lib/videos/video-texture-loader.ts:338-382`) accepts VideoLoadOptions with quality field
 - Worker receives options object (`public/workers/video-processor.worker.js:77`) but doesn't use it for URL transformation
 - ImageKit transformation patterns exist (`src/lib/utils.ts:233-242` for images, `src/lib/schema/map-before-request.ts:1435-1440` for videos)
@@ -17,11 +18,13 @@ The video loading system currently downloads full-size videos through a Web Work
 ## Desired End State
 
 Videos load reliably within the 15-second timeout by automatically applying ImageKit optimizations based on quality settings. The system should:
+
 - Apply WebM format conversion, resolution capping (720p), and duration limits (10s) by default
 - Make transformations configurable via VideoLoadOptions
 - Work only for ImageKit URLs (non-breaking for other sources)
 
 ### Success Verification:
+
 - Large videos that previously timed out now load successfully
 - Video URLs contain appropriate transformation parameters
 - Non-ImageKit videos continue working unchanged
@@ -134,11 +137,13 @@ async loadVideoTexture(
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Type checking passes: `pnpm typecheck`
 - [x] Build succeeds: `pnpm build`
 - [x] Existing tests pass: `pnpm test:unit`
 
 #### Manual Verification:
+
 - [ ] Videos load successfully with transformation parameters in URL
 - [ ] Large videos that previously timed out now load within 15 seconds
 - [ ] Video quality is acceptable at each quality level
@@ -238,11 +243,13 @@ async loadVideoTexture(
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] Type checking passes: `pnpm typecheck`
 - [ ] Build succeeds: `pnpm build`
 - [ ] Unit tests pass: `pnpm test:unit`
 
 #### Manual Verification:
+
 - [ ] Custom transformation options are applied correctly
 - [ ] Quality presets work when custom options not provided
 - [ ] Videos with duration=0 don't get duration transformation
@@ -272,7 +279,7 @@ if (!isProdEnv) {
       original: videoUrl,
       optimized: optimizedUrl,
       quality: options.quality || "medium",
-      transformations: transformations
+      transformations: transformations,
     });
   }
 }
@@ -283,7 +290,7 @@ if (!isProdEnv && wasOptimized) {
   videoPerformanceMonitor.recordOptimization(blockId, {
     originalUrl: videoUrl,
     optimizedUrl: optimizedUrl,
-    quality: options.quality || "medium"
+    quality: options.quality || "medium",
   });
 }
 ```
@@ -291,11 +298,13 @@ if (!isProdEnv && wasOptimized) {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] Type checking passes: `pnpm typecheck`
 - [ ] Build succeeds: `pnpm build`
 - [ ] No console logs appear in production build
 
 #### Manual Verification:
+
 - [ ] Console shows optimization details in development
 - [ ] Performance monitor tracks optimized videos
 - [ ] No logging in production environment
@@ -305,17 +314,20 @@ if (!isProdEnv && wasOptimized) {
 ## Testing Strategy
 
 ### Unit Tests:
+
 - Test URL transformation logic with various inputs
 - Verify non-ImageKit URLs remain unchanged
 - Test quality preset application
 - Test custom option overrides
 
 ### Integration Tests:
+
 - Load ImageKit video with each quality setting
 - Verify timeout behavior with large videos
 - Test fallback to main thread with optimized URLs
 
 ### Manual Testing Steps:
+
 1. Load a project with ImageKit videos
 2. Verify transformation parameters in Network tab
 3. Test with videos that previously timed out

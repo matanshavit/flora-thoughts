@@ -5,7 +5,19 @@ git_commit: 1d413c2fc2a94dd3a6b4ca0839d5a148ce76984f
 branch: eng-1126
 repository: eng-1126
 topic: "Preventing Web Worker Timeouts for Video Processing through ImageKit Optimizations and Streaming Strategies"
-tags: [research, codebase, video-processing, web-workers, imagekit, webgl, streaming, r3f-canvas, timeouts, optimization]
+tags:
+  [
+    research,
+    codebase,
+    video-processing,
+    web-workers,
+    imagekit,
+    webgl,
+    streaming,
+    r3f-canvas,
+    timeouts,
+    optimization,
+  ]
 status: complete
 last_updated: 2025-10-17
 last_updated_by: matanshavit
@@ -22,6 +34,7 @@ last_updated_by: matanshavit
 ## Research Question
 
 Now that we finished implementing for ticket ENG-1057, we want to make sure the web workers do not time out, as much as possible. Research:
+
 - Getting the webm version of mp4 files from ImageKit instead of the full size file
 - How to convert the resolution lower or cap it at a certain limit
 - How to truncate the play time to a certain limit
@@ -42,12 +55,14 @@ The current video processing system in the r3F canvas uses a Web Worker to downl
 The video processing system centers around `VideoTextureCoordinator` (`src/lib/videos/video-texture-loader.ts:83-648`) which orchestrates loading through a Web Worker:
 
 **Worker Initialization** (`video-texture-loader.ts:97-217`):
+
 - Preloads worker file for caching
 - 3 retry attempts with exponential backoff (1000ms base delay)
 - 5-second ping timeout to verify worker responsiveness
 - Falls back to main thread after all retries fail
 
 **Worker Processing Flow** (`video-processor.worker.js:77-127`):
+
 1. Sends HEAD request for content-type and content-length
 2. Posts video metadata to main thread
 3. Downloads full video file with `fetch(videoUrl)`
@@ -57,12 +72,14 @@ The video processing system centers around `VideoTextureCoordinator` (`src/lib/v
 7. Returns object URL to main thread
 
 **The Critical 15-Second Timeout** (`video-texture-loader.ts:396-409`):
+
 - Hard-coded timeout of 15000ms for entire worker operation
 - Includes full video download, blob conversion, and object URL creation
 - Timeout encompasses network latency, download time, and processing
 - On timeout, deletes callback and rejects with detailed error
 
 **Main Thread Fallback** (`video-texture-loader.ts:513-587`):
+
 - Creates video element directly on main thread
 - Uses `requestIdleCallback` to prevent UI blocking (2000ms timeout)
 - Safari fallback uses direct loading without idle callback
@@ -74,6 +91,7 @@ ImageKit provides comprehensive video optimization through URL parameters, all u
 #### 1. Format Conversion (MP4 to WebM)
 
 **Parameters**:
+
 - `f-webm`: Force WebM output with VP9 codec
 - `f-mp4`: Force MP4 output with H.264 codec
 - `f-auto`: Automatic format selection based on browser support
@@ -82,6 +100,7 @@ ImageKit provides comprehensive video optimization through URL parameters, all u
 - `ac-opus`: Use Opus audio codec (WebM)
 
 **Example Implementation**:
+
 ```javascript
 // In video-texture-loader.ts loadVideoTexture method
 const optimizedUrl = `${videoUrl}?tr=f-webm,vc-vp9,ac-opus`;
@@ -92,12 +111,14 @@ const optimizedUrl = `${videoUrl}?tr=f-webm,vc-vp9,ac-opus`;
 #### 2. Resolution Capping (720p Limit)
 
 **Parameters**:
+
 - `h-720`: Cap height at 720px
 - `w-1280`: Cap width at 1280px
 - `c-at_max`: Limit to maximum dimensions without exceeding
 - `ar-16_9`: Maintain specific aspect ratio
 
 **Example Implementation**:
+
 ```javascript
 // Cap at 720p while maintaining aspect ratio
 const cappedUrl = `${videoUrl}?tr=h-720,c-at_max`;
@@ -111,11 +132,13 @@ const exact720pUrl = `${videoUrl}?tr=w-1280,h-720,c-at_max`;
 #### 3. Duration Truncation (10 Second Limit)
 
 **Parameters**:
+
 - `du-10`: Output will be exactly 10 seconds
 - `eo-10`: Keep only first 10 seconds
 - `so-5,du-10`: Extract 10 seconds starting at 5-second mark
 
 **Example Implementation**:
+
 ```javascript
 // Limit to first 10 seconds
 const truncatedUrl = `${videoUrl}?tr=du-10`;
@@ -129,6 +152,7 @@ const segmentUrl = `${videoUrl}?tr=so-5,du-10`;
 #### 4. Combined Optimization Strategy
 
 **Recommended transformation chain for maximum optimization**:
+
 ```javascript
 function getOptimizedVideoUrl(originalUrl: string, options = {}) {
   const {
@@ -167,6 +191,7 @@ The codebase already implements several ImageKit patterns that can be adapted fo
 #### URL Transformation Patterns
 
 **Query Parameter Transformations** (`src/lib/utils.ts:233-242`):
+
 ```typescript
 export function toHumaneSizedImageUrl(url: string, size: { width: number; height: number }) {
   if (url.startsWith("https://ik.imagekit.io/")) {
@@ -177,11 +202,13 @@ export function toHumaneSizedImageUrl(url: string, size: { width: number; height
 ```
 
 **Path-Based Transformations** (`src/lib/images/helpers.ts:368-390`):
+
 - Inserts transformation segment in URL path
 - Pattern: `/account/tr:w-1536/path/to/file.jpg`
 - Currently used for image downscaling
 
 **Video Thumbnail Generation** (`src/lib/videos/helpers.ts:196-214`):
+
 ```typescript
 export function getVideoThumbnailUrl(videoUrl: string | undefined): string | undefined {
   if (!videoUrl?.startsWith("https://ik.imagekit.io/")) return undefined;
@@ -193,6 +220,7 @@ export function getVideoThumbnailUrl(videoUrl: string | undefined): string | und
 #### Avoiding 302 Redirects
 
 **Original Video Flag** (`src/lib/schema/map-before-request.ts:1435-1440`):
+
 ```typescript
 // Avoid 302 response on first transformation
 const parts = newParams.video_url.split("/");
@@ -208,19 +236,21 @@ if (!parts.includes("tr:orig")) {
 #### Browser Streaming APIs
 
 **Media Source Extensions (MSE)**:
+
 - Provides fine-grained control over video buffering
 - Enables progressive loading without downloading entire file
 - Supported in Web Workers (Chrome 108+)
 - Works with standard `<video>` elements through `srcObject`
 
 **Implementation Pattern**:
+
 ```javascript
 // In video-processor.worker.js - replace current blob download
 async function streamVideo(videoUrl, blockId) {
   const mediaSource = new MediaSource();
   const objectUrl = URL.createObjectURL(mediaSource);
 
-  mediaSource.addEventListener('sourceopen', async () => {
+  mediaSource.addEventListener("sourceopen", async () => {
     const sourceBuffer = mediaSource.addSourceBuffer('video/webm; codecs="vp9,opus"');
     const response = await fetch(videoUrl);
     const reader = response.body.getReader();
@@ -229,17 +259,16 @@ async function streamVideo(videoUrl, blockId) {
       const { value, done } = await reader.read();
       if (done) break;
 
-      await new Promise(resolve => {
+      await new Promise((resolve) => {
         sourceBuffer.appendBuffer(value);
         sourceBuffer.onupdateend = resolve;
       });
 
       // Post progress updates to main thread
       self.postMessage({
-        type: 'videoProgress',
+        type: "videoProgress",
         blockId,
-        loaded: sourceBuffer.buffered.length > 0
-          ? sourceBuffer.buffered.end(0) : 0
+        loaded: sourceBuffer.buffered.length > 0 ? sourceBuffer.buffered.end(0) : 0,
       });
     }
   });
@@ -249,6 +278,7 @@ async function streamVideo(videoUrl, blockId) {
 ```
 
 **THREE.VideoTexture Integration**:
+
 - VideoTexture automatically updates from streaming video element
 - No changes needed to existing `VideoMaterial` component
 - Browser handles buffering and frame availability
@@ -256,12 +286,13 @@ async function streamVideo(videoUrl, blockId) {
 #### Adaptive Bitrate Streaming via ImageKit
 
 **HLS Implementation**:
+
 ```javascript
 // Request HLS manifest from ImageKit
 const hlsManifestUrl = `${videoUrl}/ik-master.m3u8?tr=sr-240_360_480_720`;
 
 // Use HLS.js library for browsers without native support
-import Hls from 'hls.js';
+import Hls from "hls.js";
 
 if (Hls.isSupported()) {
   const hls = new Hls();
@@ -275,6 +306,7 @@ if (Hls.isSupported()) {
 ```
 
 **Benefits**:
+
 - Starts playback with lowest quality (240p) for fast initial load
 - Automatically adapts to network conditions
 - Prevents timeout by loading incrementally
@@ -284,6 +316,7 @@ if (Hls.isSupported()) {
 #### Current Timeout Issue
 
 The 15-second timeout (`video-texture-loader.ts:409`) encompasses:
+
 1. Network request initiation
 2. Full file download
 3. Blob conversion in memory
@@ -294,6 +327,7 @@ For large videos, download alone can exceed 15 seconds.
 #### Proposed Solutions
 
 **1. Separate Network Timeout from Processing Timeout**:
+
 ```javascript
 // Modified loadInWorker method
 private async loadInWorker(videoUrl: string, blockId: string, options: VideoLoadOptions) {
@@ -330,6 +364,7 @@ private async loadInWorker(videoUrl: string, blockId: string, options: VideoLoad
 ```
 
 **2. Progressive Loading with Early Texture Creation**:
+
 ```javascript
 // Create texture immediately, update as data arrives
 private async loadProgressively(videoUrl: string, blockId: string) {
@@ -352,22 +387,24 @@ private async loadProgressively(videoUrl: string, blockId: string) {
 ```
 
 **3. Implement Chunked Download in Worker**:
+
 ```javascript
 // In video-processor.worker.js
-async function downloadInChunks(url, chunkSize = 1024 * 1024) { // 1MB chunks
+async function downloadInChunks(url, chunkSize = 1024 * 1024) {
+  // 1MB chunks
   const chunks = [];
   let downloaded = 0;
 
   // Get total size
-  const headResponse = await fetch(url, { method: 'HEAD' });
-  const totalSize = parseInt(headResponse.headers.get('content-length'));
+  const headResponse = await fetch(url, { method: "HEAD" });
+  const totalSize = parseInt(headResponse.headers.get("content-length"));
 
   while (downloaded < totalSize) {
     const start = downloaded;
     const end = Math.min(downloaded + chunkSize - 1, totalSize - 1);
 
     const response = await fetch(url, {
-      headers: { 'Range': `bytes=${start}-${end}` }
+      headers: { Range: `bytes=${start}-${end}` },
     });
 
     chunks.push(await response.arrayBuffer());
@@ -375,8 +412,8 @@ async function downloadInChunks(url, chunkSize = 1024 * 1024) { // 1MB chunks
 
     // Report progress
     self.postMessage({
-      type: 'downloadProgress',
-      progress: downloaded / totalSize
+      type: "downloadProgress",
+      progress: downloaded / totalSize,
     });
   }
 
@@ -392,6 +429,7 @@ async function downloadInChunks(url, chunkSize = 1024 * 1024) { // 1MB chunks
 From `thoughts/shared/research/2025-10-14-ENG-1057-webworker-timeout-root-causes.md`:
 
 **Root Causes Identified**:
+
 1. Blocking network operations - Full video download required
 2. Memory-intensive blob creation for large videos
 3. Sequential processing without streaming
@@ -405,6 +443,7 @@ From `thoughts/shared/research/2025-10-14-ENG-1057-webworker-timeout-root-causes
 From `thoughts/shared/research/2025-10-16-ENG-1057-video-thumbnails-imagekit.md`:
 
 **Already Implemented Pattern**:
+
 - ImageKit thumbnail generation working for images
 - Video thumbnail URL pattern: `${videoUrl}/ik-thumbnail.jpg`
 - Can specify time offset: `tr=so-<seconds>` for specific frames
@@ -418,6 +457,7 @@ Based on all findings, here's the recommended implementation approach:
 #### Phase 1: Quick Wins (Immediate Implementation)
 
 1. **Add ImageKit URL Transformations**:
+
 ```javascript
 // In video-texture-loader.ts
 private getOptimizedUrl(originalUrl: string, quality: 'low' | 'medium' | 'high'): string {
@@ -448,6 +488,7 @@ private getOptimizedUrl(originalUrl: string, quality: 'low' | 'medium' | 'high')
 ```
 
 2. **Separate Network and Processing Timeouts**:
+
 - Increase network timeout to 30 seconds
 - Keep processing timeout at 5 seconds
 - Add progress reporting from worker
@@ -455,11 +496,13 @@ private getOptimizedUrl(originalUrl: string, quality: 'low' | 'medium' | 'high')
 #### Phase 2: Streaming Implementation
 
 1. **Implement MSE in Worker**:
+
 - Replace blob download with streaming approach
 - Progressive buffer management
 - Early object URL creation
 
 2. **Add HLS.js Support**:
+
 - Detect HLS support
 - Fallback to progressive download
 - Integrate with VideoMaterial component
@@ -467,11 +510,13 @@ private getOptimizedUrl(originalUrl: string, quality: 'low' | 'medium' | 'high')
 #### Phase 3: Advanced Optimizations
 
 1. **Predictive Preloading**:
+
 - Preload video metadata on hover
 - Cache thumbnails aggressively
 - Prefetch based on viewport proximity
 
 2. **Quality Adaptation**:
+
 - Start with low quality
 - Upgrade quality after initial load
 - Base quality on device capabilities
@@ -479,16 +524,19 @@ private getOptimizedUrl(originalUrl: string, quality: 'low' | 'medium' | 'high')
 ## Code References
 
 ### Core Video Processing
+
 - `src/lib/videos/video-texture-loader.ts:83-648` - VideoTextureCoordinator class
 - `public/workers/video-processor.worker.js:77-127` - Worker video processing
 - `src/components/r3f/blocks/video/video-material.tsx:96-182` - Video material loading
 
 ### ImageKit Integration
+
 - `src/lib/imagekit/helpers.ts:7-20` - ImageKit client initialization
 - `src/lib/videos/helpers.ts:196-214` - Video thumbnail URL generation
 - `src/lib/utils.ts:233-242` - Image URL transformation helper
 
 ### Timeout Configuration
+
 - `src/lib/videos/video-texture-loader.ts:409` - 15-second timeout definition
 - `src/lib/videos/video-texture-loader.ts:91-93` - Worker configuration constants
 
@@ -531,10 +579,12 @@ Key architectural constraint: Videos must be fully downloaded before texture cre
 ### Immediate Actions (Can implement now)
 
 1. **Add ImageKit transformations** to `VideoTextureCoordinator.loadVideoTexture()`:
+
    - Default to 720p, 30 seconds, WebM format
    - Make configurable via VideoLoadOptions
 
 2. **Increase network timeout** to 30 seconds:
+
    - Separate from processing timeout
    - Add timeout reason to error messages
 

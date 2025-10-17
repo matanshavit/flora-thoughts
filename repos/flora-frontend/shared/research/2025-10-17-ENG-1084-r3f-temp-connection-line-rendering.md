@@ -66,6 +66,7 @@ type ConnectionRef = {
 ```
 
 When a connection starts (`use-connection-manager.tsx:77-101`):
+
 - Handle position calculated based on node position and width
 - **Critical**: Start and end positions set with `z=10` (`use-connection-manager.tsx:85`)
 - This z-position is much higher than regular edges (z=-0.5) and blocks (z=0-400)
@@ -73,14 +74,15 @@ When a connection starts (`use-connection-manager.tsx:77-101`):
 #### Temporary Line Rendering
 
 The `TempConnectionLine` component (`temp-connection-line.tsx:63-114`):
+
 1. Uses `RibbonGeometryBuilder` to create curved bezier line geometry
 2. Updates every frame via `useFrame` hook
 3. Material configuration (`temp-connection-line.tsx:30-37`):
    ```typescript
-   color: 0xffffff
-   transparent: true
-   opacity: 0.7
-   side: THREE.DoubleSide
+   color: 0xffffff;
+   transparent: true;
+   opacity: 0.7;
+   side: THREE.DoubleSide;
    ```
 4. **No explicit z-position or renderOrder set on the mesh**
 5. Relies on z-values from the curve points (start.z = 10, end.z = 10)
@@ -103,16 +105,19 @@ Internal block components use tiny z-offsets (0.00001 to 0.00008) relative to th
 ### Rendering Order Patterns
 
 #### Pattern 1: Dynamic Z-Position Management
+
 - Blocks use `useActiveNodeZIndex` hook to dynamically adjust z-position
 - Dragging/connecting adds MAX_BLOCK_BODY_Z (400) offset to bring to front
 - Updated via `useFrame` by setting `group.position.setZ()`
 
 #### Pattern 2: depthWrite Configuration
+
 - Many transparent overlays use `depthWrite: false` to prevent occlusion
 - Edges, connection handles, selection boxes all disable depth writing
 - **TempConnectionLine does NOT set depthWrite** - uses default (true)
 
 #### Pattern 3: RenderOrder Property
+
 - Some components use `renderOrder` for explicit draw order
 - Marquee selection uses `renderOrder: 2`
 - **TempConnectionLine does NOT set renderOrder**
@@ -129,10 +134,11 @@ The temporary connection line may not always render on top because:
 ### Comparison with Static Edges
 
 Static edges (`Edge.tsx:228,365`) use:
+
 ```typescript
-depthWrite: false
-transparent: true
-position.z = EDGE_Z_POSITION (-0.5)
+depthWrite: false;
+transparent: true;
+position.z = EDGE_Z_POSITION(-0.5);
 ```
 
 TempConnectionLine differs by not setting depthWrite=false, which could cause rendering inconsistencies.
@@ -151,6 +157,7 @@ TempConnectionLine differs by not setting depthWrite=false, which could cause re
 ### Geometry Management
 
 The system uses object pooling and in-place updates:
+
 - `RibbonGeometryBuilder` pre-allocates buffers for maximum curve size
 - Updates geometry without creating new objects each frame
 - Reuses Vector3 instances to minimize garbage collection
@@ -158,6 +165,7 @@ The system uses object pooling and in-place updates:
 ### Material System
 
 Components follow consistent material patterns:
+
 - Transparent overlays use `transparent: true` with reduced opacity
 - Interactive elements often use `depthWrite: false`
 - `DoubleSide` rendering for visibility from both angles
@@ -165,11 +173,13 @@ Components follow consistent material patterns:
 ## Historical Context (from thoughts/)
 
 ### Related Tickets
+
 - **ENG-1084** (`thoughts/shared/tickets/ENG-1084.md`): Current ticket about TempConnectionLine rendering
 - **ENG-929** (`thoughts/shared/tickets/ENG-929.md`): Undo-redo implementation for R3F
 - **ENG-1057** (`thoughts/shared/tickets/ENG-1057.md`): Video loading issues in R3F canvas
 
 ### Previous Research
+
 - Multiple research documents about video loading and shader implementation in R3F
 - Analysis of opacity mixing patterns and dual texture blending
 - Performance and reliability analysis of R3F canvas rendering
@@ -192,6 +202,7 @@ The research shows the R3F canvas has evolved from ReactFlow, with ongoing work 
 ## Code References
 
 Key files for implementing the fix:
+
 - `src/components/r3f/temp-connection-line.tsx:30-37` - Material configuration
 - `src/components/r3f/temp-connection-line.tsx:115` - Mesh rendering
 - `src/hooks/use-connection-manager.tsx:85` - Z-position setting
