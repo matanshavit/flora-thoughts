@@ -11,6 +11,7 @@ This PR addresses data integrity issues in the Convex user system that could lea
 [ENG-1063](https://linear.app/florafauna/issue/ENG-1063/convex-user-fixes) - Convex user fixes
 
 The specific problems:
+
 1. When a user updates their email, the `sanitizedEmail` field was not being updated, leading to data inconsistency
 2. Missing unique index on `clerkId` could potentially allow duplicate clerk IDs in the database
 
@@ -37,9 +38,11 @@ The solution implements automatic synchronization of the `sanitizedEmail` field 
 ## Screen Recording / Screenshots
 
 ### Before:
+
 N/A - Backend data integrity fix with no UI changes
 
 ### After:
+
 N/A - Backend data integrity fix with no UI changes
 
 ## How to verify it

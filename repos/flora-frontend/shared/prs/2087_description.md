@@ -36,9 +36,11 @@ The approach simplifies the preview selection logic by removing user interaction
 ## Screen Recording / Screenshots
 
 ### Before:
+
 Users could manually select thumbnails and upload custom images, leading to empty thumbnail slots
 
 ### After:
+
 N/A - UI simplification, preview is now automatically selected
 
 ## How to verify it

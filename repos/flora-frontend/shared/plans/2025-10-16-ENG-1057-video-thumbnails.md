@@ -9,6 +9,7 @@ Implement full-quality first-frame video thumbnails using ImageKit to replace bl
 After the lazy loading implementation (commit a4d10ca92), video blocks show gray pulsating skeleton placeholders until users interact (hover/select). Videos don't load at all until first interaction, creating a poor visual experience with blank tiles. While the `VideoUrlOutput` type includes a `thumbnailUrl` field, it's never populated during video generation or display.
 
 ### Key Discoveries:
+
 - `VideoMaterial` currently shows `SkeletonMaterial` when no video texture exists (`video-material.tsx:211-220`)
 - ImageKit supports video thumbnails via `/ik-thumbnail.jpg` suffix pattern
 - Image nodes successfully use `toHumaneSizedImageUrl()` for thumbnail optimization
@@ -20,6 +21,7 @@ After the lazy loading implementation (commit a4d10ca92), video blocks show gray
 Video blocks display high-quality thumbnail images immediately on render, showing the first frame of the video content. These thumbnails remain visible until the user interacts with the node (hover/select), triggering the full video load. The implementation reuses existing patterns from image nodes to avoid code duplication.
 
 ### Verification:
+
 - Video blocks show thumbnail images instead of skeleton placeholders
 - Thumbnails use full quality first frame without resolution/size changes
 - Full video loads on first interaction as before
@@ -82,11 +84,13 @@ export function getVideoThumbnailUrl(videoUrl: string | null | undefined): strin
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Type checking passes: `pnpm typecheck`
 - [x] Linting passes: `pnpm lint`
 - [x] Build succeeds: `pnpm build`
 
 #### Manual Verification:
+
 - [ ] Helper returns correct thumbnail URLs for ImageKit videos
 - [ ] Helper returns null for non-ImageKit URLs
 - [ ] Helper returns null for non-video URLs
@@ -166,7 +170,7 @@ useEffect(() => {
         videoUrl,
         thumbnailUrl,
       });
-    }
+    },
   );
 
   return () => {
@@ -191,11 +195,13 @@ import { getVideoThumbnailUrl } from "@/lib/videos/helpers";
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Type checking passes: `pnpm typecheck`
 - [x] Build succeeds: `pnpm build`
 - [x] No TypeScript errors in VideoMaterial
 
 #### Manual Verification:
+
 - [ ] Thumbnail textures load successfully from ImageKit
 - [ ] No console errors during thumbnail loading
 - [ ] Textures are properly configured for display
@@ -286,12 +292,14 @@ return (
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Type checking passes: `pnpm typecheck`
 - [x] Linting passes: `pnpm lint`
 - [x] Build succeeds: `pnpm build`
 - [x] Development server runs without errors: `pnpm dev`
 
 #### Manual Verification:
+
 - [ ] Thumbnails display instead of skeleton placeholders
 - [ ] Thumbnails show first frame of video at full quality
 - [ ] Smooth transition from thumbnail to video on interaction
@@ -345,11 +353,13 @@ return () => {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Type checking passes: `pnpm typecheck`
 - [x] Build succeeds: `pnpm build`
 - [ ] No memory leaks in browser DevTools
 
 #### Manual Verification:
+
 - [ ] Textures are properly disposed when switching between videos
 - [ ] No memory accumulation when navigating between nodes
 - [ ] Performance metrics remain stable during extended use
@@ -361,16 +371,19 @@ return () => {
 ## Testing Strategy
 
 ### Unit Tests:
+
 - Test `getVideoThumbnailUrl()` helper with various URL formats
 - Verify thumbnail URL generation for ImageKit videos
 - Test null returns for non-ImageKit and non-video URLs
 
 ### Integration Tests:
+
 - Verify thumbnail loads before video interaction
 - Test transition from thumbnail to video on hover
 - Verify lazy loading still prevents video load until interaction
 
 ### Manual Testing Steps:
+
 1. Open a project with video nodes
 2. Verify thumbnails appear immediately (no skeleton)
 3. Hover over video node and verify video loads

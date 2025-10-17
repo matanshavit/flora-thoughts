@@ -7,6 +7,7 @@ Implement a visual loading indicator for video blocks that displays both thumbna
 ## Current State Analysis
 
 The video loading system currently uses a three-stage sequential pattern:
+
 1. **Thumbnail stage**: Displays static thumbnail image
 2. **Skeleton stage**: Shows pulsing gray placeholder when loading starts
 3. **Video stage**: Shows the loaded video texture
@@ -14,6 +15,7 @@ The video loading system currently uses a three-stage sequential pattern:
 Each stage completely replaces the previous material, with no visual transition between states. The research document (thoughts/shared/research/2025-10-17-ENG-1057-opacity-mixing-patterns.md) identified Option 2 (Layered Materials) as the preferred approach for creating a mixed loading state.
 
 ### Key Discoveries:
+
 - Current implementation uses conditional returns to swap materials (`video-material.tsx:215-240`)
 - All materials share the same shader structure with rounded corners (`video-and-image-shaders.ts`)
 - FadeTransitionGroup pattern exists for opacity animations (`fade-transition-group.tsx`)
@@ -23,12 +25,14 @@ Each stage completely replaces the previous material, with no visual transition 
 ## Desired End State
 
 After implementation, the video loading experience will:
+
 - Display the thumbnail as a base layer that remains visible
 - Overlay a semi-transparent skeleton animation when loading begins
 - Smoothly fade out the skeleton overlay as the video loads
 - Provide visual continuity throughout the loading process
 
 ### Verification:
+
 - Thumbnail remains visible during loading
 - Skeleton overlay appears with smooth fade-in animation
 - Both layers display correctly with proper transparency
@@ -51,11 +55,13 @@ Use a layered mesh approach where the thumbnail and skeleton are rendered as sep
 ## Phase 1: Create Layered Video Material Component
 
 ### Overview
+
 Refactor VideoMaterial to render thumbnail and skeleton as overlapping layers instead of sequential replacements.
 
 ### Changes Required:
 
 #### 1. Update VideoMaterial Component Structure
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Replace conditional returns with layered group structure
 
@@ -105,6 +111,7 @@ return (
 ```
 
 #### 2. Add Skeleton Opacity State Management
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Add opacity state and animation logic after line 43
 
@@ -122,7 +129,7 @@ useFrame((_, delta) => {
     skeletonOpacityRef.current,
     targetOpacity,
     lambda,
-    delta
+    delta,
   );
 
   // Only update state if changed significantly
@@ -133,6 +140,7 @@ useFrame((_, delta) => {
 ```
 
 #### 3. Import Required Dependencies
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Add imports at top of file
 
@@ -145,11 +153,13 @@ import { OPACITY_LERP_T } from "@/components/r3f/constants";
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] Type checking passes: `pnpm typecheck`
 - [ ] Build completes successfully: `pnpm build`
 - [ ] No linting errors: `pnpm lint`
 
 #### Manual Verification:
+
 - [ ] Thumbnail displays immediately when video block loads
 - [ ] Skeleton overlay appears when loading starts
 - [ ] Both layers visible simultaneously during loading
@@ -163,11 +173,13 @@ import { OPACITY_LERP_T } from "@/components/r3f/constants";
 ## Phase 2: Update Skeleton Material for Opacity Control
 
 ### Overview
+
 Modify SkeletonMaterial to accept an external opacity prop that works with the pulsing animation.
 
 ### Changes Required:
 
 #### 1. Add Opacity Prop to SkeletonMaterial
+
 **File**: `src/components/r3f/shaders/skeleton.tsx`
 **Changes**: Update component props interface around line 10
 
@@ -190,6 +202,7 @@ export function SkeletonMaterial({
 ```
 
 #### 2. Update Shader Uniforms
+
 **File**: `src/components/r3f/shaders/skeleton.tsx`
 **Changes**: Add base opacity uniform around line 85
 
@@ -204,6 +217,7 @@ uniforms={{
 ```
 
 #### 3. Update Fragment Shader
+
 **File**: `src/components/r3f/shaders/skeleton.tsx`
 **Changes**: Modify fragment shader to use base opacity around line 25
 
@@ -223,6 +237,7 @@ void main() {
 ```
 
 #### 4. Update Opacity in useFrame
+
 **File**: `src/components/r3f/shaders/skeleton.tsx`
 **Changes**: Update base opacity in animation loop around line 71
 
@@ -240,14 +255,16 @@ useFrame((_, delta) => {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] Type checking passes: `pnpm typecheck`
 - [ ] Component tests pass: `pnpm test:unit`
 - [ ] No shader compilation errors in browser console
 
 #### Manual Verification:
+
 - [ ] Skeleton material accepts opacity prop
 - [ ] Pulsing animation still works with custom opacity
-- [ ] Opacity multiplies correctly (base * pulse * alpha)
+- [ ] Opacity multiplies correctly (base _ pulse _ alpha)
 - [ ] Smooth transitions when opacity changes
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding to the next phase.
@@ -257,11 +274,13 @@ useFrame((_, delta) => {
 ## Phase 3: Integrate FadeTransitionGroup for Smooth Transitions
 
 ### Overview
+
 Wrap the skeleton overlay in FadeTransitionGroup for smooth fade-in/out animations.
 
 ### Changes Required:
 
 #### 1. Wrap Skeleton Layer with FadeTransitionGroup
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Update the skeleton overlay section
 
@@ -269,26 +288,29 @@ Wrap the skeleton overlay in FadeTransitionGroup for smooth fade-in/out animatio
 import { FadeTransitionGroup } from "@/components/r3f/fade-transition-group";
 
 // In the return statement, replace skeleton mesh with:
-{isLoading && !texture && (
-  <FadeTransitionGroup
-    fadeIn={true}
-    duration={0.3}
-    isolateMaterials={false}
-  >
-    <mesh position-z={0.001}>
-      <planeGeometry args={[displayWidth, displayHeight]} />
-      <SkeletonMaterial
-        width={displayWidth}
-        height={displayHeight}
-        radiusX={BLOCK_BORDER_RADIUS}
-        radiusY={BLOCK_BORDER_RADIUS}
-      />
-    </mesh>
-  </FadeTransitionGroup>
-)}
+{
+  isLoading && !texture && (
+    <FadeTransitionGroup
+      fadeIn={true}
+      duration={0.3}
+      isolateMaterials={false}
+    >
+      <mesh position-z={0.001}>
+        <planeGeometry args={[displayWidth, displayHeight]} />
+        <SkeletonMaterial
+          width={displayWidth}
+          height={displayHeight}
+          radiusX={BLOCK_BORDER_RADIUS}
+          radiusY={BLOCK_BORDER_RADIUS}
+        />
+      </mesh>
+    </FadeTransitionGroup>
+  );
+}
 ```
 
 #### 2. Remove Manual Opacity Animation
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Remove the useFrame hook and opacity state added in Phase 1
 
@@ -302,11 +324,13 @@ import { FadeTransitionGroup } from "@/components/r3f/fade-transition-group";
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] Type checking passes: `pnpm typecheck`
 - [ ] Build succeeds: `pnpm build`
 - [ ] No React warnings about unmounting during animations
 
 #### Manual Verification:
+
 - [ ] Skeleton fades in smoothly over 0.3 seconds
 - [ ] Skeleton fades out when video loads
 - [ ] No abrupt transitions or flashing
@@ -319,58 +343,71 @@ import { FadeTransitionGroup } from "@/components/r3f/fade-transition-group";
 ## Phase 4: Handle Edge Cases and Cleanup
 
 ### Overview
+
 Address edge cases like missing thumbnails and add proper cleanup for animations.
 
 ### Changes Required:
 
 #### 1. Handle Missing Thumbnail Case
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Update base layer condition
 
 ```tsx
-{/* Base layer: Show skeleton if no thumbnail available */}
-{(shouldDisplayThumbnail || (!texture && !thumbnailUrl)) && (
-  thumbnailUrl ? (
-    <mesh>
-      <planeGeometry args={[displayWidth, displayHeight]} />
-      <ThumbnailImageMaterial
-        thumbnailUrl={thumbnailUrl}
-        displayWidth={displayWidth}
-        displayHeight={displayHeight}
-      />
-    </mesh>
-  ) : (
-    <mesh>
-      <planeGeometry args={[displayWidth, displayHeight]} />
-      <SkeletonMaterial
-        width={displayWidth}
-        height={displayHeight}
-        radiusX={BLOCK_BORDER_RADIUS}
-        radiusY={BLOCK_BORDER_RADIUS}
-        opacity={0.3} // Lower opacity for base skeleton
-      />
-    </mesh>
-  )
-)}
+{
+  /* Base layer: Show skeleton if no thumbnail available */
+}
+{
+  (shouldDisplayThumbnail || (!texture && !thumbnailUrl)) &&
+    (thumbnailUrl ? (
+      <mesh>
+        <planeGeometry args={[displayWidth, displayHeight]} />
+        <ThumbnailImageMaterial
+          thumbnailUrl={thumbnailUrl}
+          displayWidth={displayWidth}
+          displayHeight={displayHeight}
+        />
+      </mesh>
+    ) : (
+      <mesh>
+        <planeGeometry args={[displayWidth, displayHeight]} />
+        <SkeletonMaterial
+          width={displayWidth}
+          height={displayHeight}
+          radiusX={BLOCK_BORDER_RADIUS}
+          radiusY={BLOCK_BORDER_RADIUS}
+          opacity={0.3} // Lower opacity for base skeleton
+        />
+      </mesh>
+    ));
+}
 
-{/* Loading overlay: Only show if we have a thumbnail */}
-{isLoading && !texture && thumbnailUrl && (
-  <FadeTransitionGroup fadeIn={true} duration={0.3}>
-    <mesh position-z={0.001}>
-      <planeGeometry args={[displayWidth, displayHeight]} />
-      <SkeletonMaterial
-        width={displayWidth}
-        height={displayHeight}
-        radiusX={BLOCK_BORDER_RADIUS}
-        radiusY={BLOCK_BORDER_RADIUS}
-        opacity={0.5} // Higher opacity for overlay
-      />
-    </mesh>
-  </FadeTransitionGroup>
-)}
+{
+  /* Loading overlay: Only show if we have a thumbnail */
+}
+{
+  isLoading && !texture && thumbnailUrl && (
+    <FadeTransitionGroup
+      fadeIn={true}
+      duration={0.3}
+    >
+      <mesh position-z={0.001}>
+        <planeGeometry args={[displayWidth, displayHeight]} />
+        <SkeletonMaterial
+          width={displayWidth}
+          height={displayHeight}
+          radiusX={BLOCK_BORDER_RADIUS}
+          radiusY={BLOCK_BORDER_RADIUS}
+          opacity={0.5} // Higher opacity for overlay
+        />
+      </mesh>
+    </FadeTransitionGroup>
+  );
+}
 ```
 
 #### 2. Add Z-Index Constant
+
 **File**: `src/components/r3f/constants.ts`
 **Changes**: Add constant for skeleton overlay z-position
 
@@ -383,6 +420,7 @@ export const BLOCK_Z = {
 ```
 
 #### 3. Use Z-Index Constant
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Replace hardcoded z-position
 
@@ -396,12 +434,14 @@ import { BLOCK_Z } from "@/components/r3f/constants";
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] All tests pass: `pnpm test:unit`
 - [ ] Type checking passes: `pnpm typecheck`
 - [ ] Linting passes: `pnpm lint`
 - [ ] Build succeeds: `pnpm build`
 
 #### Manual Verification:
+
 - [ ] Videos without thumbnails show single skeleton
 - [ ] Videos with thumbnails show layered loading state
 - [ ] No memory leaks from animation loops
@@ -413,18 +453,21 @@ import { BLOCK_Z } from "@/components/r3f/constants";
 ## Testing Strategy
 
 ### Unit Tests:
+
 - Test VideoMaterial renders correct layers based on state
 - Test SkeletonMaterial accepts and applies opacity prop
 - Test FadeTransitionGroup integration with skeleton overlay
 - Test edge cases (no thumbnail, immediate video load)
 
 ### Integration Tests:
+
 - Test full loading sequence from thumbnail to video
 - Test interrupting load (navigate away during loading)
 - Test multiple video blocks loading simultaneously
 - Test with different video sizes and aspect ratios
 
 ### Manual Testing Steps:
+
 1. Create a new video block with a thumbnail URL
 2. Trigger video loading and observe thumbnail + skeleton overlay
 3. Verify skeleton pulses while maintaining base transparency

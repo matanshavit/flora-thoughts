@@ -9,11 +9,13 @@ Implement runtime uniqueness validation for the `clerkId` field in Convex user c
 The Convex user system currently has a `clerkId` field with a non-unique index (`by_clerk_id`) added in a previous implementation. However, Convex does not support database-level unique constraints - uniqueness must be enforced at the application level through runtime validation in mutations.
 
 Current situation:
+
 - `clerkId` has an index at `convex/schema.ts:115` but it's not a unique constraint
 - User creation in `convex/users/helpers.ts:58-93` sets `clerkId` without checking for duplicates
 - The pattern for uniqueness checking already exists for `sanitizedEmail` at lines 70-78
 
 ### Key Discoveries:
+
 - Convex requires application-level uniqueness enforcement in mutations
 - The codebase uses a "check-then-insert" pattern for `sanitizedEmail` uniqueness
 - `clerkId` is only set during user creation, never updated afterward
@@ -22,12 +24,14 @@ Current situation:
 ## Desired End State
 
 After implementing this plan:
+
 - The `_createUser` helper will check for existing users with the same `clerkId` before insertion
 - Duplicate `clerkId` attempts will throw a clear error message
 - The system will prevent any new duplicate `clerkId` entries at runtime
 - Existing duplicate detection patterns will be consistently applied
 
 ### Verification:
+
 - Attempting to create a user with an existing `clerkId` will fail with an error
 - Normal user creation with unique `clerkId` values continues to work
 - Error messages clearly indicate the duplicate `clerkId` issue
@@ -49,11 +53,13 @@ Add runtime validation to the `_createUser` helper function following the existi
 ## Phase 1: Add ClerkId Uniqueness Check
 
 ### Overview
+
 Modify the `_createUser` helper function to check for existing users with the same `clerkId` before creating a new user, following the pattern already established for `sanitizedEmail`.
 
 ### Changes Required:
 
-#### 1. Update _createUser Helper Function
+#### 1. Update \_createUser Helper Function
+
 **File**: `convex/users/helpers.ts`
 **Changes**: Add clerkId uniqueness check before user insertion
 
@@ -128,12 +134,14 @@ export async function _createUser(
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] TypeScript compilation passes: `pnpm typecheck`
 - [x] Linting passes: `pnpm lint`
 - [x] Build succeeds: `pnpm build`
 - [x] Convex deployment succeeds: `pnpm convex deploy`
 
 #### Manual Verification:
+
 - [ ] Normal user registration works with unique clerkId
 - [ ] Attempting to create a user with duplicate clerkId throws an error
 - [ ] Error message clearly indicates the duplicate clerkId
@@ -150,18 +158,21 @@ export async function _createUser(
 ## Testing Strategy
 
 ### Unit Tests:
+
 - Mock `ctx.db.query` to test duplicate clerkId detection
 - Test that duplicate clerkId throws an error
 - Test that unique clerkId allows user creation
 - Test that email duplicate still returns existing user ID
 
 ### Integration Tests:
+
 - Create user with unique clerkId - should succeed
 - Attempt to create another user with same clerkId - should fail
 - Verify error message contains the duplicate clerkId
 - Ensure email uniqueness logic is not affected
 
 ### Manual Testing Steps:
+
 1. Create a new user through the standard signup flow
 2. Attempt to create another user with the same clerkId (may require API testing)
 3. Verify error is thrown and logged
@@ -187,6 +198,7 @@ export async function _createUser(
 The implementation follows these principles:
 
 1. **Email Duplicates** (existing behavior): Return existing user ID silently
+
    - Rationale: Idempotent operation, user might be re-authenticating
 
 2. **ClerkId Duplicates** (new behavior): Throw an error

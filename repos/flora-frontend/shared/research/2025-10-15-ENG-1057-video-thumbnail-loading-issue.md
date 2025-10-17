@@ -142,12 +142,14 @@ The parent components need to:
 ## Code References
 
 ### Current Implementation Files
+
 - `src/components/r3f/static-video-block-r3f.tsx:79-214` - Parent component with interaction tracking
 - `src/components/r3f/video-block-result.tsx:49-125` - Child component with duplicate tracking
 - `src/components/r3f/blocks/video/video-material.tsx:63-220` - Material showing skeleton instead of thumbnail
 - `src/lib/videos/video-texture-loader.ts:335-587` - Video loading coordinator
 
 ### Thumbnail Infrastructure (Not Currently Used)
+
 - `shared/files/thumbnails.ts:7-23` - Thumbnail URL generation functions
 - `src/lib/videos/helpers.ts:98-188` - Video frame extraction utilities
 - `src/components/r3f/shared-asset-preview.tsx:149-153` - Example of thumbnail display pattern
@@ -175,11 +177,11 @@ The parent components need to:
 
 ### Loading State Matrix
 
-| hasInteracted | videoUrl passed | Current Display | Required Display |
-|--------------|-----------------|-----------------|------------------|
-| false        | undefined       | SkeletonMaterial | Thumbnail Image |
-| false→true   | undefined→url   | Skeleton→Loading | Thumbnail→Loading |
-| true         | url            | Video           | Video |
+| hasInteracted | videoUrl passed | Current Display  | Required Display  |
+| ------------- | --------------- | ---------------- | ----------------- |
+| false         | undefined       | SkeletonMaterial | Thumbnail Image   |
+| false→true    | undefined→url   | Skeleton→Loading | Thumbnail→Loading |
+| true          | url             | Video            | Video             |
 
 ## Historical Context (from thoughts/)
 

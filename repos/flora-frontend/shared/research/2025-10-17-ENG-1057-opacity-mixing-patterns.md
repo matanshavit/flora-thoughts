@@ -20,9 +20,11 @@ last_updated_by: Matan Shavit
 **Repository**: eng-1057
 
 ## Research Question
+
 How to implement a visual loading indicator when video starts loading but the thumbnail image texture is displayed, showing the thumbnail image and skeleton mixed together with opacity on one or both.
 
 ## Summary
+
 The current implementation in the last commit uses a **texture switching pattern** rather than opacity mixing. The video material component transitions from thumbnail → skeleton → video using conditional rendering. To achieve the desired mixed loading state, the codebase provides several patterns for opacity blending that could be adapted.
 
 ## Key Findings
@@ -30,7 +32,9 @@ The current implementation in the last commit uses a **texture switching pattern
 ### Current Implementation (Last Commit)
 
 #### 1. Three-Stage Loading Pattern
+
 The video material currently implements sequential states:
+
 ```typescript
 // Stage 1: Show thumbnail
 if (shouldDisplayThumbnail) {
@@ -49,7 +53,9 @@ return <VideoShaderMaterial texture={texture} ... />
 All three materials use the same shader (`VideoShaderMaterial`), enabling seamless transitions but not concurrent display.
 
 #### 2. Shader Structure
+
 The current shader accepts a single texture uniform:
+
 ```glsl
 uniform sampler2D map;
 uniform float radiusX;
@@ -65,7 +71,9 @@ void main() {
 ### Opacity Mixing Patterns Found
 
 #### Pattern 1: Dual Texture Blending in Fragment Shader
+
 **Approach**: Modify the shader to accept two textures and a mix factor
+
 ```glsl
 uniform sampler2D thumbnailMap;
 uniform sampler2D skeletonMap; // Or generate procedurally
@@ -86,9 +94,11 @@ void main() {
 ```
 
 #### Pattern 2: Layered Meshes with Different Opacities
+
 **Found in**: FadeTransitionGroup pattern (`src/components/r3f/fade-transition-group.tsx`)
 
 Create two overlapping meshes:
+
 ```tsx
 <group>
   {/* Thumbnail mesh */}
@@ -113,7 +123,9 @@ Create two overlapping meshes:
 ```
 
 #### Pattern 3: Modified Skeleton Material with Texture Background
+
 **Approach**: Enhance SkeletonMaterial to accept an optional background texture
+
 ```glsl
 uniform sampler2D backgroundMap; // Optional thumbnail
 uniform bool hasBackground;
@@ -149,6 +161,7 @@ void main() {
 ### Existing Patterns for Reference
 
 #### Opacity Animation Pattern (from FadeTransitionGroup)
+
 ```typescript
 useFrame((_, delta) => {
   const lambda = duration > 0 ? Math.log(20) / duration : Infinity;
@@ -158,20 +171,21 @@ useFrame((_, delta) => {
 ```
 
 #### Material State Tracking Pattern
+
 ```typescript
-const [displayState, setDisplayState] = useState<'thumbnail' | 'loading' | 'video'>('thumbnail');
+const [displayState, setDisplayState] = useState<"thumbnail" | "loading" | "video">("thumbnail");
 const [loadingOpacity, setLoadingOpacity] = useState(0);
 
 useEffect(() => {
   if (texture) {
-    setDisplayState('video');
+    setDisplayState("video");
   } else if (shouldLoadVideo) {
-    setDisplayState('loading');
+    setDisplayState("loading");
   }
 }, [texture, shouldLoadVideo]);
 
 useFrame((_, delta) => {
-  if (displayState === 'loading') {
+  if (displayState === "loading") {
     // Fade in skeleton overlay
     setLoadingOpacity(THREE.MathUtils.damp(loadingOpacity, 0.5, 3, delta));
   } else {
@@ -184,9 +198,11 @@ useFrame((_, delta) => {
 ## Recommended Implementation Approach
 
 ### Option 1: Enhanced VideoShaderMaterial (Recommended)
+
 Modify the existing video shader to support dual texture/effect blending:
 
 1. **Update shader uniforms**:
+
 ```typescript
 uniforms={{
   map: { value: displayTexture },
@@ -199,6 +215,7 @@ uniforms={{
 ```
 
 2. **Modify fragment shader**:
+
 ```glsl
 uniform sampler2D map;
 uniform float showSkeleton;
@@ -224,17 +241,23 @@ void main() {
 ```
 
 3. **Update time uniform in component**:
+
 ```typescript
 useFrame((_, delta) => {
   if (materialRef.current && isLoading) {
     materialRef.current.uniforms.time.value += delta;
-    materialRef.current.uniforms.showSkeleton.value =
-      THREE.MathUtils.damp(materialRef.current.uniforms.showSkeleton.value, 1.0, 3, delta);
+    materialRef.current.uniforms.showSkeleton.value = THREE.MathUtils.damp(
+      materialRef.current.uniforms.showSkeleton.value,
+      1.0,
+      3,
+      delta,
+    );
   }
 });
 ```
 
 ### Option 2: Layered Approach
+
 Keep materials separate but render both simultaneously:
 
 ```tsx
@@ -250,7 +273,10 @@ return (
     </mesh>
 
     {isLoading && (
-      <FadeTransitionGroup fadeIn={true} duration={0.3}>
+      <FadeTransitionGroup
+        fadeIn={true}
+        duration={0.3}
+      >
         <mesh position-z={0.001}>
           <planeGeometry args={[displayWidth, displayHeight]} />
           <SkeletonMaterial
@@ -270,11 +296,13 @@ return (
 ## Files to Modify
 
 ### For Option 1 (Shader Modification):
+
 1. `/src/components/r3f/shaders/video-and-image-shaders.ts` - Add skeleton blending to fragment shader
 2. `/src/components/r3f/blocks/video/video-shader-material.tsx` - Add new uniforms
 3. `/src/components/r3f/blocks/video/video-material.tsx` - Update loading state logic
 
 ### For Option 2 (Layered Approach):
+
 1. `/src/components/r3f/blocks/video/video-material.tsx` - Change return structure
 2. `/src/components/r3f/shaders/skeleton.tsx` - Add opacity uniform support if needed
 

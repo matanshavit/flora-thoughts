@@ -7,6 +7,7 @@ Remove the thumbnail selection UI from the "Publish to Community" dialog to simp
 ## Current State Analysis
 
 The current implementation in `src/components/projects/publish-to-community-dialog.tsx` provides:
+
 - A preview mockup showing how the thumbnail will appear (lines 173-191)
 - A grid of selectable thumbnails from project outputs (lines 192-213)
 - An upload button for custom thumbnails (lines 214-233)
@@ -14,6 +15,7 @@ The current implementation in `src/components/projects/publish-to-community-dial
 - Existing fallback logic that already selects the first thumbnail if none chosen (line 116)
 
 ### Key Discoveries:
+
 - The fallback behavior we want already exists at line 116: `selectedPreview ?? possiblePreviewUrls[0]`
 - The dialog is only used in one place: `share-project-dialog.tsx`
 - No other components depend on the thumbnail selection functionality
@@ -22,6 +24,7 @@ The current implementation in `src/components/projects/publish-to-community-dial
 ## Desired End State
 
 After implementation:
+
 - The dialog will show only the title and description form fields
 - Thumbnails will be automatically selected from the first available project output
 - No visual preview or selection UI will be shown
@@ -31,11 +34,13 @@ After implementation:
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] Type checking passes: `pnpm typecheck`
 - [ ] Build completes successfully: `pnpm build`
 - [ ] No linting errors: `pnpm lint`
 
 #### Manual Verification:
+
 - [ ] Dialog opens without thumbnail selection UI
 - [ ] Publishing works with automatic thumbnail selection
 - [ ] Projects with outputs publish successfully
@@ -59,15 +64,18 @@ This is primarily a code removal task. We'll remove the UI components for thumbn
 ## Phase 1: Remove Thumbnail Selection UI
 
 ### Overview
+
 Remove all visual components related to thumbnail preview and selection from the dialog.
 
 ### Changes Required:
 
 #### 1. Remove Preview Mockup and Thumbnail Grid
+
 **File**: `src/components/projects/publish-to-community-dialog.tsx`
 **Changes**: Delete lines 173-233 (entire preview section)
 
 Remove this entire block:
+
 ```tsx
 // Lines 173-233 - DELETE ALL OF THIS
 <div className="relative mb-4 w-full">
@@ -136,10 +144,12 @@ Remove this entire block:
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Component compiles without errors
 - [x] No TypeScript errors related to removed UI
 
 #### Manual Verification:
+
 - [ ] Dialog opens without preview mockup image
 - [ ] No thumbnail selection buttons visible
 - [ ] No upload button visible
@@ -151,15 +161,18 @@ Remove this entire block:
 ## Phase 2: Simplify Thumbnail Logic
 
 ### Overview
+
 Remove state management for thumbnail selection and simplify the automatic selection logic.
 
 ### Changes Required:
 
 #### 1. Remove Thumbnail Selection State Variables
+
 **File**: `src/components/projects/publish-to-community-dialog.tsx`
 **Changes**: Remove state declarations and update logic
 
 Remove these state variables (lines 57-59, 62):
+
 ```tsx
 // Line 57 - DELETE
 const inputRef = useRef<HTMLInputElement>(null);
@@ -172,24 +185,29 @@ const [selectedPreview, setSelectedPreview] = useState<string | null>(null);
 ```
 
 #### 2. Update possiblePreviewUrls Array
+
 **File**: `src/components/projects/publish-to-community-dialog.tsx`
 **Changes**: Simplify array to only include project outputs
 
 Update line 98 from:
+
 ```tsx
 const possiblePreviewUrls = [...projectOutputs, uploadedImageUrl].filter(Boolean);
 ```
 
 To:
+
 ```tsx
 const possiblePreviewUrls = projectOutputs.filter(Boolean);
 ```
 
 #### 3. Remove Upload Handler Function
+
 **File**: `src/components/projects/publish-to-community-dialog.tsx`
 **Changes**: Delete entire function (lines 100-113)
 
 Remove:
+
 ```tsx
 // Lines 100-113 - DELETE
 const handleUploadPreview = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -209,24 +227,29 @@ const handleUploadPreview = async (e: ChangeEvent<HTMLInputElement>): Promise<vo
 ```
 
 #### 4. Update Submit Handler
+
 **File**: `src/components/projects/publish-to-community-dialog.tsx`
 **Changes**: Simplify preview URL selection
 
 Update line 116 from:
+
 ```tsx
 const previewUrl = selectedPreview ?? possiblePreviewUrls[0];
 ```
 
 To:
+
 ```tsx
 const previewUrl = possiblePreviewUrls[0];
 ```
 
 #### 5. Update useEffect Hook
+
 **File**: `src/components/projects/publish-to-community-dialog.tsx`
 **Changes**: Remove selectedPreview sync
 
 Update lines 86-96 from:
+
 ```tsx
 useEffect(() => {
   setSelectedPreview(communityProject?.previewUrl ?? null);
@@ -242,6 +265,7 @@ useEffect(() => {
 ```
 
 To:
+
 ```tsx
 useEffect(() => {
   form.reset(
@@ -258,11 +282,13 @@ useEffect(() => {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] No unused variable warnings
 - [x] TypeScript compilation succeeds
 - [x] No references to removed state variables
 
 #### Manual Verification:
+
 - [ ] Form still resets when community project loads
 - [ ] Automatic thumbnail selection works
 - [ ] Error shown when no thumbnails available
@@ -274,15 +300,18 @@ useEffect(() => {
 ## Phase 3: Clean Up Unused Code
 
 ### Overview
+
 Remove unused imports and clean up any remaining references.
 
 ### Changes Required:
 
 #### 1. Clean Up Imports
+
 **File**: `src/components/projects/publish-to-community-dialog.tsx`
 **Changes**: Remove unused imports
 
 Remove from imports:
+
 - `UploadIcon` from lucide-react (line 11)
 - `uploadImageClient` from upload helpers (line 6)
 - `ThumbnailImage` component (line 15) - only if not used elsewhere
@@ -291,6 +320,7 @@ Remove from imports:
 - `cn` utility (line 8) - only if not used elsewhere
 
 Updated imports section:
+
 ```tsx
 import { useShowError } from "@/components/nodes/useShowError";
 import { Button } from "@/components/ui/button";
@@ -319,11 +349,13 @@ Note: Keep `getOutputThumnailUrl` import as it may still be needed for future di
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] No unused import warnings: `pnpm typecheck`
 - [x] Build succeeds: `pnpm build` (failed due to DB connection, not our changes)
 - [x] Linting passes: `pnpm lint` (config issue, not our changes)
 
 #### Manual Verification:
+
 - [ ] Complete end-to-end publish flow works
 - [ ] Update existing publication works
 - [ ] Unpublish functionality works
@@ -334,17 +366,20 @@ Note: Keep `getOutputThumnailUrl` import as it may still be needed for future di
 ## Testing Strategy
 
 ### Unit Tests:
+
 - Verify dialog renders without thumbnail UI
 - Test form submission with automatic thumbnail selection
 - Test error handling when no outputs available
 
 ### Integration Tests:
+
 - Publish new project to community
 - Update existing community project
 - Unpublish project
 - Test with projects containing various output types (images, videos)
 
 ### Manual Testing Steps:
+
 1. Open a project with image/video outputs
 2. Click "Share" → "Community" tab → "Publish to Community"
 3. Verify no thumbnail selection UI appears
@@ -358,6 +393,7 @@ Note: Keep `getOutputThumnailUrl` import as it may still be needed for future di
 ## Performance Considerations
 
 This change actually improves performance by:
+
 - Reducing the number of rendered components
 - Eliminating state updates for selection
 - Removing image upload functionality

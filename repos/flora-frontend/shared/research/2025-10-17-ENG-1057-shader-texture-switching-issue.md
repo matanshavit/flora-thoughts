@@ -20,6 +20,7 @@ last_updated_by: matanshavit
 **Repository**: flora-frontend
 
 ## Research Question
+
 The last commit implements a video lazy loading solution where a thumbnail texture should be replaced by a video texture when the video loads. However, the shader does not switch from the image texture to the video texture. It can render the image texture alone, and when the image texture is completely removed, it can render the video texture alone. But in the current implementation, it does not remove the image texture to show the video texture. Why?
 
 ## Summary
@@ -57,6 +58,7 @@ useEffect(() => {
 ```
 
 **The Logic Flow**:
+
 1. Line 262: If `texture` (video) exists, use it and dispose thumbnail
 2. Line 268: Otherwise, if `thumbnailTexture` exists, use it
 3. **Missing**: No handling when both are `null` - the effect runs but doesn't call `setDisplayTexture`
@@ -67,9 +69,9 @@ The video loading effect at lines 116-232 updates multiple states when the video
 
 ```typescript
 // Line 172-174
-setTexture(result.texture);     // Update 1
+setTexture(result.texture); // Update 1
 videoRef.current = result.video;
-setIsLoading(false);            // Update 2
+setIsLoading(false); // Update 2
 ```
 
 React batches these state updates. The component re-renders with the new `texture` and `isLoading` values, but the `displayTexture` effect hasn't run yet. The render condition at line 273 checks:
@@ -95,6 +97,7 @@ uniforms={{
 ```
 
 The `map` uniform directly references `displayTexture`. React Three Fiber's reconciliation mechanism:
+
 1. Detects when the `uniforms` prop changes (new object on every render)
 2. Diffs the uniform values
 3. Updates `material.uniforms.map.value` when `displayTexture` changes
@@ -103,12 +106,14 @@ The `map` uniform directly references `displayTexture`. React Three Fiber's reco
 ### The Complete Data Flow
 
 #### Phase 1: Initial State
+
 - `texture`: `null`
 - `thumbnailTexture`: `null`
 - `displayTexture`: `null` (from `useState(thumbnailTexture)`)
 - Renders: SkeletonMaterial
 
 #### Phase 2: Thumbnail Loads
+
 - Thumbnail loads asynchronously at line 92-97
 - `setThumbnailTexture(loadedTexture)` called
 - Effect runs: `texture` is `null`, `thumbnailTexture` is set
@@ -116,10 +121,12 @@ The `map` uniform directly references `displayTexture`. React Three Fiber's reco
 - Shader receives thumbnail texture
 
 #### Phase 3: Video Starts Loading
+
 - User hovers/selects, triggering `shouldLoadVideo = true`
 - Video loading begins (worker or fallback path)
 
 #### Phase 4: Video Loads (The Problem State)
+
 - Video texture ready, `setTexture(result.texture)` called (line 172)
 - `setIsLoading(false)` called (line 174)
 - React batches updates and schedules render
@@ -134,6 +141,7 @@ The `map` uniform directly references `displayTexture`. React Three Fiber's reco
 ### Why It Works When Thumbnail Is Removed
 
 When the thumbnail texture is completely removed (not loaded), the flow changes:
+
 1. `thumbnailTexture` stays `null`
 2. Video loads, `texture` becomes non-null
 3. Effect runs with `texture` set and `thumbnailTexture` null
@@ -157,16 +165,19 @@ When the thumbnail texture is completely removed (not loaded), the flow changes:
 ### Video Loading Pipeline
 
 1. **Lazy Loading Trigger** (`video-block-result.tsx:69-72`):
+
    - `shouldLoadVideo` starts as `false`
    - Becomes `true` when user hovers or selects
    - Once true, never returns to false (one-way gate)
 
 2. **Thumbnail Loading** (`video-material.tsx:85-114`):
+
    - Loads immediately on mount if `thumbnailUrl` provided
    - Uses THREE.TextureLoader
    - Configures texture with `configureTexture()` helper
 
 3. **Video Loading** (`video-material.tsx:116-232`):
+
    - Triggered when `shouldLoadVideo` becomes `true`
    - Two paths: Worker (default) or Fallback
    - Worker path uses `videoCoordinator.loadVideoTexture()`
@@ -180,6 +191,7 @@ When the thumbnail texture is completely removed (not loaded), the flow changes:
 ### Key Implementation Details
 
 The `VideoMaterial` component manages three texture states:
+
 - `texture`: The video texture from worker/fallback loading
 - `thumbnailTexture`: The static thumbnail image texture
 - `displayTexture`: What's actually rendered (abstraction layer)
@@ -191,6 +203,7 @@ React Three Fiber handles uniform updates through its reconciliation mechanism -
 ## Historical Context
 
 Based on the commit message "work in progress - video lazy loading" (d21bc5174), this is an in-progress implementation of lazy loading for videos with thumbnail placeholders. The feature aims to improve performance by:
+
 1. Showing lightweight thumbnails immediately
 2. Loading full videos only when user interacts
 3. Seamlessly transitioning from thumbnail to video

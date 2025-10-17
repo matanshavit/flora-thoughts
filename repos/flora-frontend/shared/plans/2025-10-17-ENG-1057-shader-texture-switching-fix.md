@@ -1,16 +1,19 @@
 # Shader Texture Switching Fix Implementation Plan
 
 ## Overview
+
 Fix the video material component's texture switching logic to properly transition from thumbnail to video texture. The current implementation has a race condition and improper state initialization that prevents the shader from switching textures correctly.
 
 ## Current State Analysis
 
 The `VideoMaterial` component at `src/components/r3f/blocks/video/video-material.tsx` manages three texture states:
+
 - `thumbnailTexture`: The static thumbnail image texture
 - `texture`: The video texture from worker/fallback loading
 - `displayTexture`: What's actually rendered (initialized with thumbnailTexture's value)
 
 ### Key Discoveries:
+
 - `displayTexture` is initialized with `thumbnailTexture`'s value at mount time (line 260), which is `null`
 - The thumbnail cleanup function (line 110-112) captures stale `thumbnailTexture` from closure
 - Multiple disposal points without coordination cause potential double-disposal
@@ -19,12 +22,14 @@ The `VideoMaterial` component at `src/components/r3f/blocks/video/video-material
 ## Desired End State
 
 The video material should:
+
 1. Display the thumbnail texture immediately when available
 2. Seamlessly switch to video texture when loaded
 3. Properly dispose of textures without double-disposal errors
 4. Handle all edge cases (unmount during load, URL changes, etc.)
 
 ### Verification:
+
 - Thumbnail displays immediately on component mount
 - Video texture replaces thumbnail when loaded (no flicker or blank frames)
 - No console errors about texture disposal
@@ -41,6 +46,7 @@ The video material should:
 ## Implementation Approach
 
 Fix the texture switching by:
+
 1. Properly initializing `displayTexture` state to handle null case
 2. Using refs to track texture disposal state and prevent double-disposal
 3. Fixing effect dependencies to avoid stale closures
@@ -49,11 +55,13 @@ Fix the texture switching by:
 ## Phase 1: Fix State Initialization and Dependencies
 
 ### Overview
+
 Fix the `displayTexture` initialization and ensure proper dependency tracking in effects.
 
 ### Changes Required:
 
 #### 1. Fix displayTexture State Initialization
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Update line 260 to properly initialize displayTexture
 
@@ -62,10 +70,13 @@ Fix the `displayTexture` initialization and ensure proper dependency tracking in
 const [displayTexture, setDisplayTexture] = useState(thumbnailTexture);
 
 // CHANGE TO:
-const [displayTexture, setDisplayTexture] = useState<THREE.Texture | THREE.VideoTexture | null>(null);
+const [displayTexture, setDisplayTexture] = useState<THREE.Texture | THREE.VideoTexture | null>(
+  null,
+);
 ```
 
 #### 2. Fix Thumbnail Effect Cleanup Dependencies
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Use a ref to track the current thumbnail texture for cleanup
 
@@ -97,7 +108,7 @@ useEffect(() => {
         error: error instanceof Error ? error.message : String(error),
         thumbnailUrl,
       });
-    }
+    },
   );
 
   return () => {
@@ -113,11 +124,13 @@ useEffect(() => {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] Type checking passes: `pnpm typecheck`
 - [ ] Linting passes: `pnpm lint`
 - [ ] Build succeeds: `pnpm build`
 
 #### Manual Verification:
+
 - [ ] Component mounts without errors
 - [ ] No console warnings about missing dependencies
 - [ ] Thumbnail cleanup works on URL change
@@ -127,11 +140,13 @@ useEffect(() => {
 ## Phase 2: Implement Proper Disposal Coordination
 
 ### Overview
+
 Add disposal tracking to prevent double-disposal of textures.
 
 ### Changes Required:
 
 #### 1. Add Disposal Tracking Ref
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Add a ref to track which textures have been disposed
 
@@ -141,6 +156,7 @@ const disposedTextures = useRef<WeakSet<THREE.Texture>>(new WeakSet());
 ```
 
 #### 2. Update Display Texture Effect with Safe Disposal
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Update the display texture switching effect (lines 261-271)
 
@@ -168,6 +184,7 @@ useEffect(() => {
 ```
 
 #### 3. Update Video Loading Effect Disposal
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Update thumbnail disposal in video loading effect (lines 130-133)
 
@@ -184,10 +201,12 @@ if (thumbnailTexture && !disposedTextures.current.has(thumbnailTexture)) {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] Type checking passes: `pnpm typecheck`
 - [ ] Unit tests pass: `pnpm test:unit`
 
 #### Manual Verification:
+
 - [ ] No double-disposal errors in console
 - [ ] Textures properly disposed on unmount
 - [ ] Memory profiler shows no texture leaks
@@ -197,11 +216,13 @@ if (thumbnailTexture && !disposedTextures.current.has(thumbnailTexture)) {
 ## Phase 3: Add Missing Dependencies
 
 ### Overview
+
 Add missing dependencies to effects to ensure proper updates.
 
 ### Changes Required:
 
 #### 1. Fix Video Loading Effect Dependencies
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Add missing dependencies to video loading effect (lines 221-232)
 
@@ -228,10 +249,12 @@ Add missing dependencies to effects to ensure proper updates.
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] ESLint exhaustive-deps rule passes
 - [ ] Type checking passes: `pnpm typecheck`
 
 #### Manual Verification:
+
 - [ ] Effect re-runs when dimensions change
 - [ ] Effect re-runs when muted state changes
 - [ ] Proper cleanup on dependency changes
@@ -241,11 +264,13 @@ Add missing dependencies to effects to ensure proper updates.
 ## Phase 4: Testing and Validation
 
 ### Overview
+
 Comprehensive testing of the texture switching fix.
 
 ### Changes Required:
 
 #### 1. Add Debug Logging (Temporary)
+
 **File**: `src/components/r3f/blocks/video/video-material.tsx`
 **Changes**: Add logging to verify texture switching
 
@@ -265,11 +290,13 @@ useEffect(() => {
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [ ] All build steps pass: `pnpm build`
 - [ ] Type checking passes: `pnpm typecheck`
 - [ ] Linting passes: `pnpm lint`
 
 #### Manual Verification:
+
 - [ ] Load a video block with thumbnail - thumbnail appears immediately
 - [ ] Hover to trigger video load - video replaces thumbnail smoothly
 - [ ] No texture flicker or blank frames during transition
@@ -285,18 +312,21 @@ useEffect(() => {
 ## Testing Strategy
 
 ### Unit Tests:
+
 - Mock THREE.TextureLoader and verify load/dispose calls
 - Test state transitions: null → thumbnail → video
 - Test cleanup on unmount during various loading states
 - Test URL change scenarios
 
 ### Integration Tests:
+
 - Load video block and verify texture switching visually
 - Test with different video formats and sizes
 - Test with missing/invalid thumbnail URLs
 - Test rapid hovering/unhovering
 
 ### Manual Testing Steps:
+
 1. Open a project with video blocks
 2. Add a new video block with generation
 3. Verify thumbnail loads immediately

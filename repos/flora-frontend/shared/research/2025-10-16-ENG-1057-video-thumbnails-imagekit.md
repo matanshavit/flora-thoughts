@@ -39,6 +39,7 @@ After commit a4d10ca92 ("feat: implement lazy loading for video blocks in r3f ca
 ### Current Video Loading Behavior (After Lazy Loading Implementation)
 
 **Video Block Implementation** (`src/components/r3f/video-block-result.tsx:31-128`)
+
 - **NEW (a4d10ca92)**: Videos use true lazy loading - don't load until first interaction
 - Tracks `hasInteracted` state to determine if user has ever hovered/selected the node
 - Passes `undefined` to VideoMaterial until `shouldLoad` is true (hasInteracted || selected || isHovered)
@@ -46,16 +47,18 @@ After commit a4d10ca92 ("feat: implement lazy loading for video blocks in r3f ca
 - Video URLs stored in `node.data.output.videoUrl` but only passed when interaction occurs
 
 **Skeleton Placeholder** (`src/components/r3f/blocks/shaders/skeleton.tsx:52-90`)
+
 - Displays pulsating gray rectangle during video load
 - Animation: `float pulse = 0.4 + 0.2 * sin(time * 3.0)`
 - Background color: `(0.55, 0.55, 0.55)`
 - Applied when `isLoading || !texture` in VideoMaterial
 
 **Existing Thumbnail Support** (`src/components/nodes/types.ts:88-92`)
+
 ```typescript
 export type VideoUrlOutput = BaseOutput & {
   videoUrl?: string;
-  thumbnailUrl?: string;  // Already exists but unused
+  thumbnailUrl?: string; // Already exists but unused
   aspectRatio?: number | null;
 };
 ```
@@ -63,12 +66,14 @@ export type VideoUrlOutput = BaseOutput & {
 ### Image Node Thumbnail Display Pattern
 
 **Image Result Component** (`src/components/nodes/models/image-block/image-block-result.tsx`)
+
 - Uses Next.js `Image` component with `toHumaneSizedImageUrl()` for optimization
 - Shows `Skeleton` overlay while loading
 - Smooth opacity transition when loaded (opacity-0 → opacity-100)
 - Calculates aspect ratio from naturalWidth/naturalHeight
 
 **ThumbnailImage Component** (`src/components/ui/thumbnail-image.tsx`)
+
 - Reusable thumbnail component with retry logic (20 retries, 1000ms delay)
 - Default size: 48x48px
 - Uses `toHumaneSizedImageUrl()` for ImageKit transformations
@@ -76,6 +81,7 @@ export type VideoUrlOutput = BaseOutput & {
 - Shows loading placeholder with pulse animation
 
 **URL Transformation Utility** (`src/lib/utils.ts:233-242`)
+
 ```typescript
 function toHumaneSizedImageUrl(url, { width, height }) {
   if (url.startsWith("https://ik.imagekit.io/")) {
@@ -88,14 +94,17 @@ function toHumaneSizedImageUrl(url, { width, height }) {
 ### ImageKit Video Thumbnail Capabilities
 
 **Basic Implementation**
+
 - Append `/ik-thumbnail.jpg` to video URL for first frame
 - Example: `https://ik.imagekit.io/demo/sample-video.mp4/ik-thumbnail.jpg`
 
 **Frame Selection**
+
 - Use `so` (start offset) parameter for specific timestamp
 - Example: `video.mp4/ik-thumbnail.jpg?tr=so-5` (5-second mark)
 
 **Image Transformations**
+
 - Width: `tr=w-300`
 - Height: `tr=h-200`
 - Aspect ratio: `tr=ar-16-9`
@@ -104,18 +113,21 @@ function toHumaneSizedImageUrl(url, { width, height }) {
 ### Key Video Node Files
 
 **2D Canvas Rendering** (`src/components/nodes/models/video-block/result-state.tsx`)
+
 - HTML `<video>` element with `preload="metadata"`
 - Shows skeleton during load
 - Auto-plays on hover/selection
 - Mute/unmute button overlay
 
 **3D Canvas Rendering** (`src/components/r3f/video-block-result.tsx`)
+
 - Three.js VideoTexture via VideoMaterial
 - Suspense boundary with skeleton fallback
 - Hover detection via mesh pointer events
 - Frame invalidation during playback
 
 **Video Material Loader** (`src/components/r3f/blocks/video/video-material.tsx`)
+
 - Web Worker loading with main thread fallback
 - Retry logic: 3 attempts, 1000ms delay
 - Creates THREE.VideoTexture on canplay event
@@ -132,6 +144,7 @@ function toHumaneSizedImageUrl(url, { width, height }) {
 ## Architecture Documentation
 
 ### Current Video Display Flow (With Lazy Loading - a4d10ca92)
+
 1. Component mounts with `videoUrl` prop but doesn't pass it to VideoMaterial
 2. Shows SkeletonMaterial placeholder immediately
 3. Tracks `hasInteracted` state (initially false)
@@ -142,6 +155,7 @@ function toHumaneSizedImageUrl(url, { width, height }) {
 8. Video plays when hovered/selected, pauses when not
 
 ### Image Node Display Pattern (Reference)
+
 1. Component receives `imageUrl` prop
 2. Shows Skeleton overlay while loading
 3. Loads image with opacity-0
@@ -149,6 +163,7 @@ function toHumaneSizedImageUrl(url, { width, height }) {
 5. Smooth transition with `transition-opacity duration-200`
 
 ### ImageKit URL Pattern
+
 1. Video URL: `https://ik.imagekit.io/{path}/video.mp4`
 2. Thumbnail: `https://ik.imagekit.io/{path}/video.mp4/ik-thumbnail.jpg`
 3. With sizing: `https://ik.imagekit.io/{path}/video.mp4/ik-thumbnail.jpg?tr=w-352,h-352`
@@ -159,16 +174,19 @@ function toHumaneSizedImageUrl(url, { width, height }) {
 With the new lazy loading behavior (a4d10ca92), thumbnails are even more critical because videos don't load at all until interaction. The solution involves:
 
 1. **Generate Thumbnail URLs**
+
    - When `videoUrl` exists, create thumbnail URL by appending `/ik-thumbnail.jpg`
    - Apply appropriate transformations (width, height based on node size)
    - Optionally use `so` parameter for specific frame (e.g., 2 seconds in)
 
 2. **Display Thumbnail Before Interaction**
+
    - Show thumbnail image immediately instead of skeleton placeholder
    - This gives users a preview of the video content before they interact
    - Keep thumbnail visible until user first hovers/selects (triggering lazy load)
 
 3. **Leverage Existing Infrastructure**
+
    - Use `ThumbnailImage` component which already handles `/ik-thumbnail.jpg` logic
    - Apply `toHumaneSizedImageUrl()` for optimal sizing
    - Store generated thumbnail URL in existing `thumbnailUrl` field

@@ -34,11 +34,13 @@ The video thumbnail system is designed to load thumbnails immediately and indepe
 The thumbnail loading system is implemented in the VideoMaterial component ([src/components/r3f/blocks/video/video-material.tsx:78-126](src/components/r3f/blocks/video/video-material.tsx#L78-126)):
 
 **State Management:**
+
 - Thumbnail texture state declared at line 42: `const [thumbnailTexture, setThumbnailTexture] = useState<THREE.Texture | null>(null);`
 - Texture loader reference at line 43: `const thumbnailLoaderRef = useRef<THREE.TextureLoader | null>(null);`
 - Loader initialized in effect at lines 71-76
 
 **Loading Effect (lines 78-126):**
+
 ```typescript
 useEffect(() => {
   if (!videoUrl || !thumbnailLoaderRef.current) {
@@ -46,7 +48,7 @@ useEffect(() => {
     return;
   }
   // Generate thumbnail URL and load texture...
-}, [videoUrl]);  // Only depends on videoUrl
+}, [videoUrl]); // Only depends on videoUrl
 ```
 
 Key observation: This effect depends ONLY on `[videoUrl]` - it is NOT tied to `shouldLoadVideo`, `hasInteracted`, or any interaction state. It should trigger immediately when `videoUrl` is provided.
@@ -56,17 +58,20 @@ Key observation: This effect depends ONLY on `[videoUrl]` - it is NOT tied to `s
 The VideoBlockResultR3F component controls when content loads ([src/components/r3f/video-block-result.tsx:48-68](src/components/r3f/video-block-result.tsx#L48-68)):
 
 **State Variables:**
+
 - `isHovered` (line 48): Tracks current hover state
 - `hasInteracted` (line 49): Sticky flag that becomes true on first interaction
 - `selected` (prop): Node selection state from parent
 
 **Loading Decision (lines 67-68):**
+
 ```typescript
 const shouldPlay = selected || isHovered;
 const shouldLoad = hasInteracted || selected || isHovered;
 ```
 
 **Prop Passing (line 126):**
+
 ```typescript
 <VideoMaterial
   videoUrl={videoUrl}
@@ -100,6 +105,7 @@ export function getVideoThumbnailUrl(videoUrl: string | null | undefined): strin
 The VideoMaterial render logic ([src/components/r3f/blocks/video/video-material.tsx:293-305](src/components/r3f/blocks/video/video-material.tsx#L293-305)):
 
 **Skeleton Fallback (lines 293-302):**
+
 ```typescript
 if (!videoUrl || (isLoading && !thumbnailTexture) || (!texture && !thumbnailTexture)) {
   return <SkeletonMaterial />;
@@ -107,6 +113,7 @@ if (!videoUrl || (isLoading && !thumbnailTexture) || (!texture && !thumbnailText
 ```
 
 **Texture Priority (line 305):**
+
 ```typescript
 const displayTexture = texture || thumbnailTexture;
 ```
@@ -143,6 +150,7 @@ if (thumbnailTexture) {
 The system implements a progressive loading strategy:
 
 1. **Immediate Tier (Thumbnails):**
+
    - Loads when `videoUrl` prop is available
    - No interaction required
    - Uses THREE.TextureLoader directly
@@ -157,17 +165,20 @@ The system implements a progressive loading strategy:
 ### State Flow
 
 1. **Component Mount:**
+
    - VideoBlockResultR3F receives `videoUrl` from props
    - Passes `videoUrl` to VideoMaterial (always, not conditional)
    - VideoMaterial thumbnail effect triggers on `videoUrl` change
 
 2. **Thumbnail Loading:**
+
    - Effect at line 78 runs when `videoUrl` is set
    - Generates thumbnail URL via helper function
    - Loads texture via THREE.TextureLoader
    - Sets `thumbnailTexture` state when loaded
 
 3. **User Interaction:**
+
    - Hover triggers `isHovered=true` and `hasInteracted=true`
    - `shouldLoad` becomes `true`
    - Video loading effect triggers
@@ -181,11 +192,13 @@ The system implements a progressive loading strategy:
 ### Current Behavior vs Expected Behavior
 
 **Expected:**
+
 - Thumbnail loads immediately on component mount
 - Video waits for user interaction
 - Smooth transition from thumbnail to video
 
 **Observed (per user feedback):**
+
 - Thumbnail only appears on hover
 - Both thumbnail and video seem tied to interaction
 - No pre-hover visual content
@@ -195,6 +208,7 @@ The system implements a progressive loading strategy:
 ### Implementation Plans
 
 From `thoughts/shared/plans/2025-10-16-ENG-1057-video-thumbnails.md`:
+
 - Phase 2 specifically implements "Thumbnail texture loading in VideoMaterial component using Three.js TextureLoader"
 - Design states thumbnails should "load immediately using off-thread image loader"
 - Thumbnails are meant to "replace skeleton placeholder before interaction"
@@ -202,10 +216,12 @@ From `thoughts/shared/plans/2025-10-16-ENG-1057-video-thumbnails.md`:
 ### Research Documents
 
 From `thoughts/shared/research/2025-10-15-ENG-1057-video-thumbnail-loading-issue.md`:
+
 - Documents investigation into why thumbnails weren't loading in PR 2075
 - Identified that thumbnail loading was initially missing from implementation
 
 From `thoughts/shared/research/2025-10-16-ENG-1057-video-thumbnails-imagekit.md`:
+
 - Confirms ImageKit supports video thumbnails via `/ik-thumbnail.jpg` pattern
 - Documents that no server-side changes needed
 
@@ -234,6 +250,7 @@ From `thoughts/shared/research/2025-10-16-ENG-1057-video-thumbnails-imagekit.md`
 Examined how VideoBlockResultR3F is used in parent components to verify videoUrl passing:
 
 **In video-block.tsx (line 643-644):**
+
 ```typescript
 videoUrl ? (
   <VideoBlockResultR3F
@@ -242,6 +259,7 @@ videoUrl ? (
 ```
 
 **In static-video-block-r3f.tsx (line 210-211):**
+
 ```typescript
 {videoUrl && (
   <VideoBlockResultR3F
@@ -272,11 +290,13 @@ Since the implementation appears correct but the behavior shows thumbnails only 
 ### Recommended Debugging Steps
 
 1. Add console logging at key points:
+
    - After thumbnail URL generation (line 86)
    - In the success callback (line 97)
    - In the error callback (line 111)
 
 2. Check browser DevTools Network tab for:
+
    - Whether thumbnail requests are being made
    - Response status codes
    - CORS headers

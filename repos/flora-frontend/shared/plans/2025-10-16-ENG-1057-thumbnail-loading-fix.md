@@ -9,6 +9,7 @@ Fix the video thumbnail loading issue where thumbnails only appear on hover inst
 After reviewing the code, the issue has been identified:
 
 1. **VideoMaterial has proper thumbnail loading** (`src/components/r3f/blocks/video/video-material.tsx:78-126`)
+
    - Thumbnail loading effect depends only on `[videoUrl]`
    - Should load immediately when videoUrl is available
    - Properly configured with texture settings and disposal
@@ -19,17 +20,20 @@ After reviewing the code, the issue has been identified:
    - Thumbnails can't load without the URL
 
 ### Key Discovery:
+
 The recent change to conditionally pass videoUrl based on `shouldLoad` prevents the thumbnail system from working as designed. The VideoMaterial component needs the URL immediately to load thumbnails, while using `shouldLoadVideo` prop to control video loading.
 
 ## Desired End State
 
 Video blocks display thumbnails immediately on render while maintaining lazy loading for videos:
+
 - Thumbnails load as soon as component mounts with videoUrl
 - Videos only load after user interaction (hover/selection)
 - Smooth transition from thumbnail to video
 - No performance regression from lazy loading
 
 ### Verification:
+
 - Thumbnails appear immediately without user interaction
 - Videos still load lazily on hover/selection
 - No increase in initial bandwidth usage (only lightweight thumbnail loads)
@@ -59,17 +63,20 @@ Restore the original behavior of always passing videoUrl to VideoMaterial, letti
 **Changes**: Restore unconditional videoUrl passing
 
 Current (line 125):
+
 ```tsx
 videoUrl={shouldLoad ? videoUrl : undefined}
 ```
 
 Change to:
+
 ```tsx
-videoUrl={videoUrl}
-shouldLoadVideo={shouldLoad}
+videoUrl = { videoUrl };
+shouldLoadVideo = { shouldLoad };
 ```
 
 This ensures:
+
 - VideoMaterial always receives the URL (needed for thumbnails)
 - Video loading is still controlled by shouldLoadVideo prop
 - Thumbnails can load immediately while videos wait for interaction
@@ -77,12 +84,14 @@ This ensures:
 ### Success Criteria:
 
 #### Automated Verification:
+
 - [x] Type checking passes: `pnpm typecheck` (has unrelated test errors)
 - [x] Linting passes: `pnpm lint` ✓
 - [x] Build succeeds: `pnpm build` (requires database connection)
 - [x] Development server runs without errors: `pnpm dev` ✓
 
 #### Manual Verification:
+
 - [ ] Open a project with video blocks
 - [ ] Thumbnails appear immediately without hovering
 - [ ] Hover over video block - video starts loading
@@ -96,6 +105,7 @@ This ensures:
 ## Testing Strategy
 
 ### Manual Testing Steps:
+
 1. Create a new project or open existing with video blocks
 2. Observe that thumbnails load immediately (no skeleton)
 3. Check browser DevTools Network tab:
@@ -106,6 +116,7 @@ This ensures:
 6. Verify memory usage remains reasonable
 
 ### Performance Verification:
+
 - Initial page load should only fetch thumbnails (~50-200KB each)
 - Videos should not download until interaction
 - No regression in time to interactive

@@ -18,12 +18,14 @@ The current implementation (PR 2075) successfully lazy-loads videos, but display
 ## Desired End State
 
 After implementation, video blocks will:
+
 1. Display their thumbnail image immediately on page load (no skeleton)
 2. Load the full video only when the user hovers or selects the block
 3. Smoothly transition from thumbnail to video when the video loads
 4. Fall back to skeleton only if the thumbnail fails to load
 
 ### Success Verification:
+
 - Open a canvas with multiple video blocks
 - All videos show thumbnails immediately (not skeletons)
 - Network tab shows thumbnail requests but no video requests on initial load
@@ -42,6 +44,7 @@ After implementation, video blocks will:
 ## Implementation Approach
 
 Use a two-stage texture loading approach:
+
 1. **Stage 1**: Load thumbnail texture immediately using `useOffThreadImageTextureLoader`
 2. **Stage 2**: Load video texture on interaction using existing lazy loading logic
 3. Display thumbnail texture until video texture is ready, then swap seamlessly
@@ -130,7 +133,7 @@ useEffect(() => {
         blockId,
         thumbnailUrl,
       });
-    }
+    },
   );
 
   return () => {
@@ -231,13 +234,14 @@ Generate thumbnail URLs from video URLs and pass them to the VideoMaterial compo
 import { getOutputThumbnailUrlWithDimensions } from "shared/files/thumbnails";
 
 // Generate thumbnail URL (after line 89, before skeletonMaterial)
-const thumbnailUrl = videoUrl && videoUrl.includes("ik.imagekit.io")
-  ? getOutputThumbnailUrlWithDimensions(
-      videoUrl,
-      Math.round(displayWidth * 2), // 2x for retina displays
-      Math.round(displayHeight * 2)
-    )
-  : undefined;
+const thumbnailUrl =
+  videoUrl && videoUrl.includes("ik.imagekit.io")
+    ? getOutputThumbnailUrlWithDimensions(
+        videoUrl,
+        Math.round(displayWidth * 2), // 2x for retina displays
+        Math.round(displayHeight * 2),
+      )
+    : undefined;
 ```
 
 #### 2. Pass Thumbnail URL to VideoMaterial
@@ -413,6 +417,7 @@ setIsLoading(false);
 ## Migration Notes
 
 No migration required. The changes are backward compatible:
+
 - Existing video blocks will automatically show thumbnails
 - Non-ImageKit videos will continue showing skeleton (current behavior)
 - No data structure changes required
