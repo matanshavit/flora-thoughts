@@ -1,7 +1,6 @@
 # Shader Texture Switching Fix Implementation Plan
 
 ## Overview
-
 Fix the video material component's texture switching logic to properly transition from thumbnail to video texture. The current implementation has a race condition and improper state initialization that prevents the shader from switching textures correctly.
 
 ## Current State Analysis
